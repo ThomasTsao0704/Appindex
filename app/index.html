@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的小程式庫</title>
+  <style>
+    body { font-family: Arial, "Microsoft JhengHei", sans-serif; background:#f5f5f7; margin:0; padding:20px; }
+    h1 { text-align:center; margin-bottom:16px; }
+    .toolbar { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-bottom:16px; }
+    .toolbar input, .toolbar select {
+      padding:8px 12px; border:1px solid #ddd; border-radius:8px; font-size:14px; min-width:180px;
+    }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap:16px; }
+    .card { background:#fff; border-radius:12px; padding:16px; box-shadow:0 2px 6px rgba(0,0,0,0.1); position:relative; }
+    .card h3 { margin:0 0 8px; }
+    .card p { font-size:13px; color:#555; min-height:32px; }
+    .badge {
+      display:inline-block; font-size:11px; padding:3px 8px; border-radius:10px;
+      background:#eef2ff; color:#3f51b5; margin-bottom:8px;
+    }
+    .links a, .links button.linkbtn {
+      display:inline-block; margin:4px 6px 0 0; padding:6px 10px; border-radius:6px;
+      text-decoration:none; font-size:12px; border:none; cursor:pointer;
+    }
+    .links a { background:#4285f4; color:#fff; }
+    .links button.linkbtn { background:#34a853; color:#fff; }
+    .note { font-size:12px; color:#999; margin-top:8px; white-space:pre-wrap; }
+    .empty { text-align:center; color:#999; margin-top:40px; }
+    .count { text-align:center; color:#888; font-size:13px; margin-bottom:10px; }
+    .modal-overlay {
+      display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;
+    }
+    .modal-overlay.active { display:flex; }
+    .modal-box {
+      background:#fff; width:90%; height:85%; max-width:1000px; border-radius:12px;
+      display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:10px 16px; border-bottom:1px solid #eee; background:#fafafa;
+    }
+    .modal-header h4 { margin:0; font-size:14px; }
+    .modal-header .actions a, .modal-header .actions button {
+      font-size:12px; padding:5px 10px; border-radius:6px; text-decoration:none; border:none; cursor:pointer; margin-left:6px;
+    }
+    .modal-header .actions a { background:#4285f4; color:#fff; }
+    .modal-header .actions button { background:#e0e0e0; color:#333; }
+    .modal-box iframe { flex:1; border:none; width:100%; }
+  </style>
+</head>
+<body>
+  <h1>我的小程式庫</h1>
+
+  <div class="toolbar">
+    <input type="text" id="searchBox" placeholder="搜尋名稱 / 說明 / 備註...">
+    <select id="stateFilter">
+      <option value="">全部狀態</option>
+    </select>
+  </div>
+
+  <div class="count" id="count"></div>
+  <div class="grid" id="grid">載入中...</div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h4 id="modalTitle"></h4>
+        <div class="actions">
+          <a id="modalOpenNew" href="#" target="_blank">在新分頁開啟</a>
+          <button onclick="closePreview()">關閉</button>
+        </div>
+      </div>
+      <iframe id="modalIframe" src=""></iframe>
+    </div>
+  </div>
+
+  <script>
+    let allItems = [];
+
+    // 從 data.json 讀取資料（GitHub Pages 上與網頁同一個資料夾）
+    fetch('data.json')
+      .then(res => {
+        if (!res.ok) throw new Error('讀取 data.json 失敗 (' + res.status + ')');
+        return res.json();
+      })
+      .then(init)
+      .catch(err => {
+        document.getElementById('grid').innerHTML =
+          '<div class="empty">無法載入資料：' + escapeHtml(err.message) +
+          '<br>（請確認 data.json 與 index.html 放在一起，且是透過網址開啟，而非直接雙擊檔案）</div>';
+      });
+
+    function init(data) {
+      allItems = Array.isArray(data) ? data : [];
+      buildStateOptions();
+      render(allItems);
+      document.getElementById('searchBox').addEventListener('input', applyFilters);
+      document.getElementById('stateFilter').addEventListener('change', applyFilters);
+    }
+
+    function buildStateOptions() {
+      const select = document.getElementById('stateFilter');
+      const usedStates = [...new Set(allItems.map(i => (i['state'] || '').trim()).filter(Boolean))];
+      usedStates.sort().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        select.appendChild(opt);
+      });
+    }
+
+    function applyFilters() {
+      const keyword = document.getElementById('searchBox').value.trim().toLowerCase();
+      const state = document.getElementById('stateFilter').value;
+
+      const filtered = allItems.filter(item => {
+        const text = `${item['name']||''} ${item['Instructions for use']||''} ${item['note']||''}`.toLowerCase();
+        const matchKeyword = !keyword || text.includes(keyword);
+        const matchState = !state || (item['state']||'').trim() === state;
+        return matchKeyword && matchState;
+      });
+
+      render(filtered);
+    }
+
+    function render(items) {
+      const grid = document.getElementById('grid');
+      const count = document.getElementById('count');
+      grid.innerHTML = '';
+      count.textContent = `共 ${items.length} 個項目`;
+
+      if (items.length === 0) {
+        grid.innerHTML = '<div class="empty">沒有符合條件的結果</div>';
+        return;
+      }
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${escapeHtml(item['name'])}</h3>
+          ${item['state'] ? `<span class="badge">${escapeHtml(item['state'])}</span>` : ''}
+          <p>${escapeHtml(item['Instructions for use'])}</p>
+          <div class="links">
+            ${item['excel link'] ? `<a href="${escapeAttr(item['excel link'])}" target="_blank">Excel</a>` : ''}
+            ${item['script link'] ? `<a href="${escapeAttr(item['script link'])}" target="_blank">Script</a>` : ''}
+            ${item['html link'] ? `<button class="linkbtn" onclick="openPreview('${escapeAttr(item['html link'])}','${escapeAttr(item['name'])}')">預覽</button>` : ''}
+          </div>
+          <div class="note">${escapeHtml(item['note'])}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openPreview(url, title) {
+      document.getElementById('modalTitle').textContent = title || '預覽';
+      document.getElementById('modalIframe').src = url;
+      document.getElementById('modalOpenNew').href = url;
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function closePreview() {
+      document.getElementById('modalOverlay').classList.remove('active');
+      document.getElementById('modalIframe').src = '';
+    }
+
+    document.getElementById('modalOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closePreview();
+    });
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+    function escapeAttr(str) {
+      return String(str || '').replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+    }
+  </script>
+</body>
+</html>
