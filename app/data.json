@@ -1,0 +1,29 @@
+[
+  {
+    "name": "請假統計表",
+    "excel link": "https://docs.google.com/spreadsheets/d/XXXXXXXX/edit",
+    "script link": "https://script.google.com/d/XXXXXXXX/edit",
+    "html link": "https://your-name.github.io/your-repo/tools/leave.html",
+    "Instructions for use": "上傳每月出勤 CSV,自動彙整各部門請假天數。",
+    "state": "已上線",
+    "note": "資料來源:HR 系統匯出\n每月 1 號更新"
+  },
+  {
+    "name": "報價單產生器",
+    "excel link": "",
+    "script link": "",
+    "html link": "https://your-name.github.io/your-repo/tools/quote.html",
+    "Instructions for use": "填入客戶與品項,一鍵產生 PDF 報價單。",
+    "state": "測試中",
+    "note": "PDF 樣式還在調整"
+  },
+  {
+    "name": "庫存盤點小工具",
+    "excel link": "https://docs.google.com/spreadsheets/d/YYYYYYYY/edit",
+    "script link": "",
+    "html link": "",
+    "Instructions for use": "掃描條碼即時比對庫存數量。",
+    "state": "規劃中",
+    "note": ""
+  }
+]
