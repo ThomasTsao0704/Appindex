@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>INDEX — 應用目錄</title>
+<meta name="description" content="以卡片目錄的方式收納並開啟你的所有應用程式">
+<meta name="theme-color" content="#16211B">
+
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="INDEX">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#16211B;
+    --ink-2:#1c281f;
+    --panel:#1F2C24;
+    --panel-line:#33453a;
+    --parchment:#E8DFC8;
+    --parchment-dim:#c9c0a6;
+    --brass:#C89B3C;
+    --brass-bright:#e0b658;
+    --rust:#C4573B;
+    --radius:14px;
+    --font-display:'Fraunces', serif;
+    --font-body:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #1b2a20 0%, transparent 60%),
+      var(--ink);
+    color:var(--parchment);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+  }
+
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+
+  /* ---------- Header / drawer face ---------- */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:linear-gradient(180deg, var(--ink) 70%, transparent);
+    backdrop-filter:blur(6px);
+    padding:22px 20px 14px;
+    border-bottom:1px solid var(--panel-line);
+  }
+  .brand{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    max-width:1100px; margin:0 auto;
+  }
+  .brand-mark{ display:flex; align-items:baseline; gap:10px; }
+  .brand-mark h1{
+    font-family:var(--font-display); font-weight:700; font-size:clamp(26px,4vw,34px);
+    letter-spacing:0.5px; margin:0; color:var(--parchment);
+  }
+  .brand-mark .tab{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:1.5px;
+    background:var(--brass); color:var(--ink); padding:3px 8px; border-radius:4px;
+    transform:translateY(-6px);
+  }
+  .brand-count{
+    font-family:var(--font-mono); font-size:12px; color:var(--parchment-dim);
+    white-space:nowrap;
+  }
+
+  .toolbar{
+    max-width:1100px; margin:16px auto 0; display:flex; gap:10px; align-items:center;
+  }
+  .search{
+    flex:1; position:relative;
+  }
+  .search input{
+    width:100%; background:var(--panel); border:1px solid var(--panel-line);
+    color:var(--parchment); font-family:var(--font-mono); font-size:14px;
+    padding:12px 14px 12px 34px; border-radius:10px; outline:none;
+  }
+  .search input::placeholder{ color:var(--parchment-dim); }
+  .search input:focus{ border-color:var(--brass); box-shadow:0 0 0 3px rgba(200,155,60,0.15); }
+  .search svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); opacity:0.6; }
+
+  .install-btn{
+    display:none; align-items:center; gap:6px;
+    background:transparent; border:1px solid var(--brass); color:var(--brass-bright);
+    padding:11px 14px; border-radius:10px; font-size:13px; cursor:pointer;
+    white-space:nowrap;
+  }
+  .install-btn:hover{ background:rgba(200,155,60,0.1); }
+  .install-btn.show{ display:inline-flex; }
+
+  .lock-btn{
+    flex:0 0 auto; width:38px; height:38px; border-radius:10px;
+    background:transparent; border:1px solid var(--panel-line); color:var(--parchment-dim);
+    font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .lock-btn:hover{ border-color:var(--brass); color:var(--brass-bright); }
+  .lock-btn.unlocked{ border-color:var(--brass); color:var(--brass); background:rgba(200,155,60,0.1); }
+
+  /* ---------- Alphabet rail ---------- */
+  .rail{
+    max-width:1100px; margin:12px auto 0; display:flex; gap:6px; overflow-x:auto;
+    padding-bottom:4px; scrollbar-width:none;
+  }
+  .rail::-webkit-scrollbar{ display:none; }
+  .rail button{
+    flex:0 0 auto; background:none; border:none; color:var(--parchment-dim);
+    font-family:var(--font-mono); font-size:12px; padding:4px 7px; cursor:pointer;
+    border-radius:5px;
+  }
+  .rail button:hover, .rail button:focus-visible{ color:var(--brass-bright); outline:1px solid var(--brass); }
+
+  /* ---------- Tag filter + sort control row ---------- */
+  .controls-row{
+    max-width:1100px; margin:12px auto 0; display:flex; align-items:center;
+    gap:10px; flex-wrap:wrap;
+  }
+  .tagrail{ display:flex; gap:6px; flex-wrap:wrap; flex:1; }
+  .tagrail button{
+    background:transparent; border:1px solid var(--panel-line); color:var(--parchment-dim);
+    font-family:var(--font-mono); font-size:11px; padding:5px 10px; border-radius:999px;
+    cursor:pointer; letter-spacing:0.3px; transition:all .12s ease;
+  }
+  .tagrail button:hover{ border-color:var(--brass); color:var(--brass-bright); }
+  .tagrail button.active{
+    background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600;
+  }
+  .tagrail .clear-tags{ color:var(--rust); border-color:transparent; }
+
+  .sort-select{
+    background:var(--panel); border:1px solid var(--panel-line); color:var(--parchment);
+    font-family:var(--font-mono); font-size:12px; padding:8px 10px; border-radius:8px;
+    outline:none; cursor:pointer; flex:0 0 auto;
+  }
+  .sort-select:focus{ border-color:var(--brass); }
+
+  .status-toggle{
+    flex:0 0 auto; display:inline-flex; align-items:center; gap:6px;
+    background:transparent; border:1px solid var(--panel-line); color:var(--parchment-dim);
+    font-family:var(--font-mono); font-size:11px; padding:7px 10px; border-radius:8px; cursor:pointer;
+  }
+  .status-toggle .sw-dot{
+    width:7px; height:7px; border-radius:50%; background:var(--panel-line); transition:background .15s;
+  }
+  .status-toggle.on{ color:var(--parchment); border-color:var(--brass); }
+  .status-toggle.on .sw-dot{ background:#5fbf77; }
+
+  /* ---------- Online status dot on cards ---------- */
+  .dot{
+    display:inline-block; width:8px; height:8px; border-radius:50%;
+    margin-left:7px; vertical-align:middle; flex:0 0 auto; pointer-events:auto; cursor:default;
+  }
+  .dot-checking{ background:var(--parchment-dim); opacity:.5; animation:dotpulse 1.2s infinite; }
+  .dot-online{ background:#5fbf77; box-shadow:0 0 6px rgba(95,191,119,.65); }
+  .dot-offline{ background:var(--rust); }
+  @keyframes dotpulse{ 0%,100%{opacity:.3;} 50%{opacity:.85;} }
+
+  /* ---------- Main content ---------- */
+  main{ max-width:1100px; margin:0 auto; padding:20px 20px 80px; }
+
+  .section-label{
+    font-family:var(--font-display); font-weight:600; font-size:15px;
+    color:var(--brass); margin:30px 0 12px; display:flex; align-items:center; gap:10px;
+  }
+  .section-label::after{ content:''; flex:1; height:1px; background:var(--panel-line); }
+  .section-label:first-child{ margin-top:0; }
+
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr));
+    gap:14px;
+  }
+
+  .card{
+    position:relative;
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:var(--radius);
+    padding:18px 16px 16px; color:inherit;
+    display:flex; flex-direction:column; gap:8px; min-height:150px;
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .card::before{
+    content:''; position:absolute; top:-1px; right:16px; width:34px; height:8px;
+    background:var(--brass); border-radius:0 0 4px 4px;
+  }
+  .card:hover, .card:focus-within{
+    transform:translateY(-3px);
+    border-color:var(--brass);
+    box-shadow:0 10px 24px rgba(0,0,0,0.35);
+  }
+  /* 整張卡片可點擊：連結鋪滿整個卡片區域，星星按鈕再疊在上面 */
+  .card .stretched-link{
+    position:absolute; inset:0; z-index:1; border-radius:inherit;
+  }
+  .card .stretched-link:focus-visible{ outline:2px solid var(--brass); outline-offset:2px; }
+
+  .card-top{
+    position:relative; z-index:2; pointer-events:none;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .card .no{
+    font-family:var(--font-mono); font-size:11px; color:var(--parchment-dim); letter-spacing:1px;
+  }
+  .card .star{
+    position:relative; z-index:2; pointer-events:auto;
+    background:none; border:none; cursor:pointer; font-size:16px; line-height:1;
+    color:var(--panel-line); padding:2px;
+  }
+  .card .star:hover{ color:var(--brass-bright); }
+  .card .star.active{ color:var(--brass); }
+
+  .card h2{
+    position:relative; z-index:2; pointer-events:none;
+    font-family:var(--font-display); font-weight:600; font-size:19px; margin:0;
+    color:var(--parchment); line-height:1.25;
+  }
+  .card p{
+    position:relative; z-index:2; pointer-events:none;
+    font-size:13.5px; line-height:1.55; color:var(--parchment-dim);
+    margin:0; flex:1;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .card .tag-row{
+    position:relative; z-index:2; pointer-events:none;
+    display:flex; gap:5px; flex-wrap:wrap;
+  }
+  .card .tag-pill{
+    font-family:var(--font-mono); font-size:10px; color:var(--brass-bright);
+    border:1px solid var(--panel-line); padding:2px 7px; border-radius:999px;
+  }
+  .card .foot{
+    position:relative; z-index:2; pointer-events:none;
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-top:4px; padding-top:10px; border-top:1px dashed var(--panel-line);
+  }
+  .card .domain{
+    font-family:var(--font-mono); font-size:11px; color:var(--brass-bright);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .card .go{ opacity:0.7; }
+  .card:hover .go{ opacity:1; }
+
+  /* ---------- States ---------- */
+  .state{
+    text-align:center; padding:70px 20px; color:var(--parchment-dim);
+  }
+  .state h3{
+    font-family:var(--font-display); color:var(--parchment); font-size:20px; margin:0 0 8px;
+  }
+  .state p{ font-size:13.5px; margin:0 0 16px; }
+  .state code{
+    font-family:var(--font-mono); background:var(--panel); padding:2px 6px; border-radius:4px;
+  }
+  .retry{
+    background:var(--brass); color:var(--ink); border:none; padding:10px 18px;
+    border-radius:8px; font-family:var(--font-mono); font-size:12.5px; cursor:pointer; font-weight:600;
+  }
+
+  .skeleton-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:14px; }
+  .skeleton{
+    height:150px; border-radius:var(--radius); background:linear-gradient(100deg, var(--panel) 40%, #263427 50%, var(--panel) 60%);
+    background-size:200% 100%; animation:shimmer 1.4s infinite;
+    border:1px solid var(--panel-line);
+  }
+  @keyframes shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+
+  footer{
+    text-align:center; padding:20px; color:var(--parchment-dim); font-family:var(--font-mono); font-size:11px;
+    opacity:0.6;
+  }
+
+  /* ---------- Floating add button ---------- */
+  .fab{
+    position:fixed; right:20px; bottom:24px; z-index:30;
+    width:54px; height:54px; border-radius:50%; border:none;
+    background:var(--brass); color:var(--ink); font-size:26px; line-height:1;
+    display:none; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow:0 10px 26px rgba(0,0,0,.45); transition:transform .15s ease, background .15s ease;
+  }
+  .fab.show{ display:flex; }
+  .fab:hover{ background:var(--brass-bright); transform:translateY(-2px); }
+  .fab:active{ transform:translateY(0); }
+
+  /* ---------- Quick-add modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:50; background:rgba(8,12,9,.66); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    width:100%; max-width:420px; background:var(--panel); border:1px solid var(--panel-line);
+    border-radius:16px; padding:22px; position:relative;
+  }
+  .modal::before{
+    content:''; position:absolute; top:-1px; left:22px; width:40px; height:9px;
+    background:var(--brass); border-radius:0 0 5px 5px;
+  }
+  .modal h3{
+    font-family:var(--font-display); font-weight:600; font-size:20px; margin:6px 0 4px; color:var(--parchment);
+  }
+  .modal .sub{ font-size:12px; color:var(--parchment-dim); margin:0 0 18px; }
+  .field{ margin-bottom:13px; }
+  .field label{
+    display:block; font-family:var(--font-mono); font-size:11px; color:var(--parchment-dim);
+    margin-bottom:5px; letter-spacing:.3px;
+  }
+  .field input, .field textarea{
+    width:100%; background:var(--ink); border:1px solid var(--panel-line); color:var(--parchment);
+    font-family:var(--font-mono); font-size:13.5px; padding:10px 12px; border-radius:8px; outline:none;
+    resize:vertical; font-family:inherit;
+  }
+  .field input:focus, .field textarea:focus{ border-color:var(--brass); box-shadow:0 0 0 3px rgba(200,155,60,.15); }
+  .field .hint{ font-size:11px; color:var(--parchment-dim); opacity:.75; margin-top:4px; }
+
+  .modal-actions{ display:flex; gap:10px; margin-top:18px; }
+  .btn{
+    flex:1; padding:11px 14px; border-radius:9px; font-family:var(--font-mono); font-size:13px;
+    cursor:pointer; border:1px solid transparent; font-weight:600;
+  }
+  .btn-primary{ background:var(--brass); color:var(--ink); }
+  .btn-primary:hover{ background:var(--brass-bright); }
+  .btn-primary:disabled{ opacity:.5; cursor:default; }
+  .btn-ghost{ background:transparent; border-color:var(--panel-line); color:var(--parchment-dim); }
+  .btn-ghost:hover{ border-color:var(--rust); color:var(--rust); }
+
+  .modal-msg{ font-size:12.5px; margin-top:2px; padding:9px 11px; border-radius:8px; display:none; }
+  .modal-msg.show{ display:block; }
+  .modal-msg.error{ background:rgba(196,87,59,.15); color:#e08a72; }
+  .modal-msg.success{ background:rgba(95,191,119,.15); color:#7fd399; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">
+      <h1>INDEX</h1>
+      <span class="tab">目錄</span>
+    </div>
+    <div class="brand-count" id="count">— 筆項目</div>
+  </div>
+  <div class="toolbar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="搜尋應用程式或說明…" autocomplete="off">
+    </div>
+    <button class="install-btn" id="installBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      安裝到主畫面
+    </button>
+    <button class="lock-btn" id="lockBtn" type="button" title="管理模式">🔒</button>
+  </div>
+  <nav class="rail" id="rail" aria-label="字母索引"></nav>
+  <div class="controls-row">
+    <nav class="tagrail" id="tagrail" aria-label="標籤篩選"></nav>
+    <button class="status-toggle" id="statusToggle" type="button" title="偵測每個網址是否可連線（僅測試網路可達性，受瀏覽器跨網域限制，僅供參考）">
+      <span class="sw-dot"></span> 線上狀態
+    </button>
+    <select class="sort-select" id="sortSelect">
+      <option value="alpha">依字母排序</option>
+      <option value="recent">最新加入優先</option>
+      <option value="popular">常用優先</option>
+    </select>
+  </div>
+</header>
+
+<main id="main">
+  <div class="skeleton-grid" id="skeleton">
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+    <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+  </div>
+</main>
+
+<footer>INDEX · 由 Google 試算表驅動</footer>
+
+<button class="fab" id="fabBtn" type="button" aria-label="快速新增卡片">+</button>
+
+<div class="modal-overlay" id="lockOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <h3 id="lockTitle">管理模式</h3>
+    <p class="sub">輸入通關密語後，會顯示新增卡片功能，並且能看到標記為私密的項目。</p>
+    <div class="field">
+      <label for="lockInput">通關密語</label>
+      <input id="lockInput" type="password" autocomplete="off">
+    </div>
+    <div class="modal-msg" id="lockMsg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="lockCancel" type="button">取消</button>
+      <button class="btn btn-primary" id="lockSubmit" type="button">解鎖</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">新增一張卡片</h3>
+    <p class="sub">送出後會直接寫入試算表最後一列，重新整理即可看到。</p>
+
+    <div class="field">
+      <label for="fAppName">App 名稱 *</label>
+      <input id="fAppName" type="text" placeholder="例如：我的 NAS" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="fUrl">網址 *</label>
+      <input id="fUrl" type="text" placeholder="https://example.com" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="fDesc">簡介</label>
+      <textarea id="fDesc" rows="2" placeholder="這個服務是做什麼的…"></textarea>
+    </div>
+    <div class="field" id="fTagsField">
+      <label for="fTags">標籤（逗號分隔，選填）</label>
+      <input id="fTags" type="text" placeholder="工作,設計">
+    </div>
+    <div class="field" id="fTokenField">
+      <label for="fToken">驗證碼（選填）</label>
+      <input id="fToken" type="password" placeholder="只有 Code.gs 有設定 SHARED_SECRET 時才需要" autocomplete="off">
+      <div class="hint">這台裝置會記住驗證碼，下次不用再輸入。</div>
+    </div>
+
+    <div class="modal-msg" id="modalMsg"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modalCancel" type="button">取消</button>
+      <button class="btn btn-primary" id="modalSubmit" type="button">新增到目錄</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+ * 設定：把下面這行換成你部署 Apps Script 後拿到的網址（結尾是 /exec）
+ * ===================================================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycbys5LvbZSsu6h7w5-S1iuBdpzg7FvV2wVtaVOHUd5ApgvpCgAed7dfUvPpZsALwvTij4Q/exec';
+
+const els = {
+  main: document.getElementById('main'),
+  skeleton: document.getElementById('skeleton'),
+  count: document.getElementById('count'),
+  search: document.getElementById('searchInput'),
+  rail: document.getElementById('rail'),
+  tagrail: document.getElementById('tagrail'),
+  sortSelect: document.getElementById('sortSelect'),
+  installBtn: document.getElementById('installBtn'),
+  statusToggle: document.getElementById('statusToggle'),
+  fabBtn: document.getElementById('fabBtn'),
+  lockBtn: document.getElementById('lockBtn'),
+  lockOverlay: document.getElementById('lockOverlay'),
+  lockInput: document.getElementById('lockInput'),
+  lockMsg: document.getElementById('lockMsg'),
+  lockCancel: document.getElementById('lockCancel'),
+  lockSubmit: document.getElementById('lockSubmit'),
+  modalOverlay: document.getElementById('modalOverlay'),
+  modalCancel: document.getElementById('modalCancel'),
+  modalSubmit: document.getElementById('modalSubmit'),
+  modalMsg: document.getElementById('modalMsg'),
+  fAppName: document.getElementById('fAppName'),
+  fUrl: document.getElementById('fUrl'),
+  fDesc: document.getElementById('fDesc'),
+  fTags: document.getElementById('fTags'),
+  fTagsField: document.getElementById('fTagsField'),
+  fToken: document.getElementById('fToken'),
+};
+
+let allApps = [];
+let activeTags = new Set();
+let sortMode = 'alpha';
+let hasTagsColumn = true;
+
+/* ---------- 管理模式（本人 vs 訪客）---------- */
+const TOKEN_KEY = 'index_token';
+let adminToken = localStorage.getItem(TOKEN_KEY) || '';
+let adminMode = !!adminToken; // 樂觀先顯示，實際權限每次都由後端依 token 重新判斷
+
+/* ---------- 線上狀態偵測 ---------- */
+const STATUS_PREF_KEY = 'index_status_enabled';
+let statusEnabled = localStorage.getItem(STATUS_PREF_KEY) !== 'off'; // 預設開啟
+let statusMap = {}; // keyOf(app) -> 'checking' | 'online' | 'offline'
+let statusRunId = 0;
+
+/* ---------- 收藏 / 使用次數（存在瀏覽器本機，不會回寫試算表） ---------- */
+const FAV_KEY = 'index_favorites_v1';
+const USAGE_KEY = 'index_usage_v1';
+
+function keyOf(a){ return (a.app + '::' + a.url).trim().toLowerCase(); }
+
+function loadFavorites(){
+  try{ return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); }
+  catch(e){ return new Set(); }
+}
+function saveFavorites(set){ localStorage.setItem(FAV_KEY, JSON.stringify([...set])); }
+let favorites = loadFavorites();
+
+function loadUsage(){
+  try{ return JSON.parse(localStorage.getItem(USAGE_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function saveUsage(obj){ localStorage.setItem(USAGE_KEY, JSON.stringify(obj)); }
+let usage = loadUsage();
+
+function toggleFavorite(id){
+  favorites.has(id) ? favorites.delete(id) : favorites.add(id);
+  saveFavorites(favorites);
+  renderFiltered();
+}
+function trackUsage(id){
+  usage[id] = (usage[id] || 0) + 1;
+  saveUsage(usage);
+}
+
+function domainOf(url){
+  try{ return new URL(url).hostname.replace(/^www\./,''); }
+  catch(e){ return url; }
+}
+
+function groupByLetter(apps){
+  const groups = {};
+  apps.forEach(a=>{
+    let letter = (a.app.trim()[0] || '#').toUpperCase();
+    if(!/[A-Z]/.test(letter)) letter = '#';
+    (groups[letter] ||= []).push(a);
+  });
+  return Object.keys(groups).sort().map(letter=>({ letter, items: groups[letter] }));
+}
+
+function allTags(apps){
+  const set = new Set();
+  apps.forEach(a=> (a.tags||[]).forEach(t=> set.add(t)));
+  return [...set].sort((a,b)=> a.localeCompare(b, 'zh-Hant'));
+}
+
+/* ---------- 線上狀態偵測（best-effort，見 README 說明）---------- */
+function cssEscapeId(id){
+  return (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+}
+
+function probeUrl(url, timeoutMs = 6000){
+  return new Promise((resolve)=>{
+    const controller = new AbortController();
+    const timer = setTimeout(()=> controller.abort(), timeoutMs);
+    const bust = (url.includes('?') ? '&' : '?') + '__indexping=1&_=' + Date.now();
+    fetch(url + bust, { mode:'no-cors', cache:'no-store', signal: controller.signal })
+      .then(()=>{ clearTimeout(timer); resolve('online'); })
+      .catch(()=>{ clearTimeout(timer); resolve('offline'); });
+  });
+}
+
+function updateDotDom(id){
+  const state = statusMap[id] || 'checking';
+  document.querySelectorAll(`[data-status="${cssEscapeId(id)}"]`).forEach(dot=>{
+    dot.classList.remove('dot-checking','dot-online','dot-offline');
+    dot.classList.add('dot-' + state);
+    dot.title =
+      state === 'online' ? '可連線（僅測試網路可達，跨網域無法確認頁面內容是否正常）' :
+      state === 'offline' ? '連線逾時或被拒絕（也可能只是跨網域限制造成的誤判）' :
+      '檢查中…';
+  });
+}
+
+async function startStatusChecks(){
+  if(!statusEnabled) return;
+  const myRun = ++statusRunId;
+
+  const unique = [];
+  const seen = new Set();
+  allApps.forEach(a=>{
+    const id = keyOf(a);
+    if(!seen.has(id)){ seen.add(id); unique.push(a); }
+  });
+
+  let idx = 0;
+  async function worker(){
+    while(idx < unique.length){
+      if(myRun !== statusRunId) return; // 使用者切換了設定，放棄這輪舊的檢查
+      const a = unique[idx++];
+      const id = keyOf(a);
+      const state = await probeUrl(a.url);
+      if(myRun !== statusRunId) return;
+      statusMap[id] = state;
+      updateDotDom(id);
+    }
+  }
+  await Promise.all(Array.from({ length: 6 }, worker));
+}
+
+function resetStatusAndRecheck(){
+  statusMap = {};
+  document.querySelectorAll('.dot').forEach(dot=>{
+    dot.classList.remove('dot-online','dot-offline');
+    dot.classList.add('dot-checking');
+  });
+  startStatusChecks();
+}
+
+function renderState(kind){
+  if(kind === 'error'){
+    els.main.innerHTML = `
+      <div class="state">
+        <h3>目錄暫時讀不到資料</h3>
+        <p>請確認 <code>API_URL</code> 是否已換成你的 Apps Script 部署網址，且部署權限為「任何人」。</p>
+        <button class="retry" id="retryBtn">重新讀取</button>
+      </div>`;
+    document.getElementById('retryBtn').onclick = load;
+  } else if(kind === 'empty'){
+    els.main.innerHTML = `
+      <div class="state">
+        <h3>目錄是空的</h3>
+        <p>在試算表加入一列資料（App / Url / Describe），重新整理這頁即可看到新卡片。</p>
+      </div>`;
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function cardHtml(a){
+  const id = keyOf(a);
+  const isFav = favorites.has(id);
+  const tags = a.tags || [];
+  const dot = statusEnabled
+    ? `<span class="dot dot-${statusMap[id] || 'checking'}" data-status="${escapeHtml(id)}" title="檢查中…"></span>`
+    : '';
+  return `
+    <div class="card">
+      <a class="stretched-link" href="${a.url}" target="_blank" rel="noopener noreferrer" aria-label="開啟 ${escapeHtml(a.app)}" data-track="${id}"></a>
+      <div class="card-top">
+        <span class="no">No. ${String(a.id).padStart(3,'0')}</span>
+        <button class="star ${isFav?'active':''}" data-fav="${id}" aria-label="收藏 ${escapeHtml(a.app)}" title="收藏">${isFav?'★':'☆'}</button>
+      </div>
+      <h2>${escapeHtml(a.app)}${dot}</h2>
+      <p>${escapeHtml(a.describe || '（尚無說明）')}</p>
+      ${tags.length ? `<div class="tag-row">${tags.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      <div class="foot">
+        <span class="domain">${escapeHtml(domainOf(a.url))}</span>
+        <svg class="go" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+      </div>
+    </div>`;
+}
+
+function bindCardEvents(container){
+  container.querySelectorAll('[data-fav]').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      toggleFavorite(btn.dataset.fav);
+    });
+  });
+  container.querySelectorAll('[data-track]').forEach(link=>{
+    link.addEventListener('click', ()=> trackUsage(link.dataset.track));
+  });
+}
+
+function renderTagRail(){
+  const tags = allTags(allApps);
+  if(tags.length === 0){ els.tagrail.innerHTML = ''; return; }
+
+  els.tagrail.innerHTML =
+    tags.map(t=>`<button data-tag="${escapeHtml(t)}" class="${activeTags.has(t)?'active':''}">${escapeHtml(t)}</button>`).join('') +
+    (activeTags.size ? `<button class="clear-tags" data-clear="1">清除標籤 ×</button>` : '');
+
+  els.tagrail.querySelectorAll('button[data-tag]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = btn.dataset.tag;
+      activeTags.has(t) ? activeTags.delete(t) : activeTags.add(t);
+      renderFiltered();
+    };
+  });
+  const clearBtn = els.tagrail.querySelector('[data-clear]');
+  if(clearBtn) clearBtn.onclick = ()=>{ activeTags.clear(); renderFiltered(); };
+}
+
+function computeFiltered(){
+  const q = els.search.value.trim().toLowerCase();
+  return allApps.filter(a=>{
+    const matchesQuery = !q
+      || a.app.toLowerCase().includes(q)
+      || (a.describe||'').toLowerCase().includes(q)
+      || (a.tags||[]).some(t=> t.toLowerCase().includes(q));
+    const matchesTags = activeTags.size === 0 || (a.tags||[]).some(t=> activeTags.has(t));
+    return matchesQuery && matchesTags;
+  });
+}
+
+function sortApps(list){
+  const arr = [...list];
+  if(sortMode === 'recent'){
+    arr.sort((a,b)=> b.id - a.id);
+  } else if(sortMode === 'popular'){
+    arr.sort((a,b)=> (usage[keyOf(b)]||0) - (usage[keyOf(a)]||0) || a.app.localeCompare(b.app, 'zh-Hant'));
+  } else {
+    arr.sort((a,b)=> a.app.localeCompare(b.app, 'zh-Hant'));
+  }
+  return arr;
+}
+
+function renderFiltered(){
+  renderTagRail();
+
+  if(allApps.length === 0){
+    renderState('empty');
+    els.rail.innerHTML = '';
+    els.count.textContent = '0 筆項目';
+    return;
+  }
+
+  const filtered = sortApps(computeFiltered());
+  els.count.textContent = `${filtered.length} / ${allApps.length} 筆項目`;
+
+  if(filtered.length === 0){
+    els.main.innerHTML = `<div class="state"><h3>沒有符合的項目</h3><p>試試別的關鍵字，或清除標籤篩選。</p></div>`;
+    els.rail.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+
+  // 收藏永遠釘選在最上面，不受排序模式影響
+  const pinned = filtered.filter(a=> favorites.has(keyOf(a)));
+  if(pinned.length){
+    html += `<h2 class="section-label">★ 收藏</h2><div class="grid">${pinned.map(cardHtml).join('')}</div>`;
+  }
+
+  if(sortMode === 'alpha'){
+    const groups = groupByLetter(filtered);
+    els.rail.innerHTML = groups.map(g=>`<button data-letter="${g.letter}">${g.letter}</button>`).join('');
+    els.rail.querySelectorAll('button').forEach(btn=>{
+      btn.onclick = ()=> document.getElementById('sec-'+btn.dataset.letter)?.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+    html += groups.map(g=>`
+      <h2 class="section-label" id="sec-${g.letter}">${g.letter}</h2>
+      <div class="grid">${g.items.map(cardHtml).join('')}</div>
+    `).join('');
+  } else {
+    els.rail.innerHTML = '';
+    const label = sortMode === 'recent' ? '最新加入優先' : '常用優先';
+    html += `<h2 class="section-label">${label}</h2><div class="grid">${filtered.map(cardHtml).join('')}</div>`;
+  }
+
+  els.main.innerHTML = html;
+  bindCardEvents(els.main);
+}
+
+// Apps Script 的回應沒有帶 CORS 標頭，跨網域用 fetch() 直接讀會被瀏覽器擋下來
+// （直接貼網址開啟不受影響，那是單純的頁面導覽，不是 CORS 請求）。
+// 這裡改用 JSONP（透過 <script> 標籤載入），不受 CORS 限制。list 和 create 都共用這個函式。
+function jsonpRequest(params){
+  return new Promise((resolve, reject)=>{
+    const cbName = 'indexCb_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    const script = document.createElement('script');
+    let done = false;
+
+    const cleanup = ()=>{
+      delete window[cbName];
+      script.remove();
+    };
+
+    window[cbName] = (data)=>{
+      done = true;
+      cleanup();
+      resolve(data);
+    };
+
+    const qs = new URLSearchParams({ ...params, callback: cbName }).toString();
+    script.src = `${API_URL}?${qs}`;
+    script.onerror = ()=>{
+      if(done) return;
+      cleanup();
+      reject(new Error('jsonp load failed'));
+    };
+
+    setTimeout(()=>{
+      if(done) return;
+      cleanup();
+      reject(new Error('jsonp timeout'));
+    }, 10000);
+
+    document.body.appendChild(script);
+  });
+}
+
+async function load(){
+  els.main.innerHTML = '';
+  els.main.appendChild(els.skeleton);
+  els.skeleton.style.display = 'grid';
+
+  try{
+    const data = await jsonpRequest({ action: 'list', token: adminToken });
+    if(!data.ok) throw new Error('bad payload');
+    allApps = data.apps;
+    hasTagsColumn = !!data.hasTagsColumn;
+    els.fTagsField.style.display = hasTagsColumn ? '' : 'none';
+    setAdminMode(!!data.isAdmin, { silent: true }); // 依後端實際判斷結果校正，token 失效時會自動恢復訪客視角
+    renderFiltered();
+    startStatusChecks();
+  } catch(err){
+    renderState('error');
+  }
+}
+
+els.search.addEventListener('input', renderFiltered);
+els.sortSelect.addEventListener('change', ()=>{
+  sortMode = els.sortSelect.value;
+  renderFiltered();
+});
+
+/* ---------- 線上狀態切換 ---------- */
+els.statusToggle.classList.toggle('on', statusEnabled);
+els.statusToggle.addEventListener('click', ()=>{
+  statusEnabled = !statusEnabled;
+  localStorage.setItem(STATUS_PREF_KEY, statusEnabled ? 'on' : 'off');
+  els.statusToggle.classList.toggle('on', statusEnabled);
+  renderFiltered();
+  if(statusEnabled) resetStatusAndRecheck();
+});
+
+load();
+
+/* ---------- PWA install prompt ---------- */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  els.installBtn.classList.add('show');
+});
+els.installBtn.addEventListener('click', async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  els.installBtn.classList.remove('show');
+});
+window.addEventListener('appinstalled', ()=>{
+  els.installBtn.classList.remove('show');
+});
+
+/* ---------- 快速新增卡片 ---------- */
+
+function openModal(){
+  els.modalMsg.className = 'modal-msg';
+  els.modalMsg.textContent = '';
+  els.fAppName.value = '';
+  els.fUrl.value = '';
+  els.fDesc.value = '';
+  els.fTags.value = '';
+  els.fToken.value = adminToken;
+  els.modalOverlay.classList.add('open');
+  els.modalSubmit.disabled = false;
+  els.modalSubmit.textContent = '新增到目錄';
+  setTimeout(()=> els.fAppName.focus(), 50);
+}
+function closeModal(){
+  els.modalOverlay.classList.remove('open');
+}
+
+els.fabBtn.addEventListener('click', openModal);
+els.modalCancel.addEventListener('click', closeModal);
+els.modalOverlay.addEventListener('click', (e)=>{
+  if(e.target === els.modalOverlay) closeModal();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && els.modalOverlay.classList.contains('open')) closeModal();
+});
+
+function showModalMsg(kind, text){
+  els.modalMsg.className = 'modal-msg show ' + kind;
+  els.modalMsg.textContent = text;
+}
+
+els.modalSubmit.addEventListener('click', async ()=>{
+  const app = els.fAppName.value.trim();
+  const url = els.fUrl.value.trim();
+  const describe = els.fDesc.value.trim();
+  const tags = els.fTags.value.trim();
+  const token = els.fToken.value.trim();
+
+  if(!app || !url){
+    showModalMsg('error', 'App 名稱與網址為必填。');
+    return;
+  }
+  if(!/^https?:\/\//i.test(url)){
+    showModalMsg('error', '網址需以 http:// 或 https:// 開頭。');
+    return;
+  }
+
+  els.modalSubmit.disabled = true;
+  els.modalSubmit.textContent = '新增中…';
+  els.modalMsg.className = 'modal-msg';
+
+  try{
+    const data = await jsonpRequest({ action:'create', app, url, describe, tags, token });
+    if(!data.ok) throw new Error(data.error || '新增失敗');
+
+    if(token) localStorage.setItem(TOKEN_KEY, token);
+    showModalMsg('success', '已新增，重新整理清單中…');
+    await load();
+    setTimeout(closeModal, 900);
+  } catch(err){
+    showModalMsg('error', err.message || '新增失敗，請稍後再試。');
+    els.modalSubmit.disabled = false;
+    els.modalSubmit.textContent = '新增到目錄';
+  }
+});
+
+/* ---------- 管理模式解鎖（本人 vs 訪客）---------- */
+function setAdminMode(on, opts){
+  adminMode = on;
+  els.lockBtn.textContent = on ? '🔓' : '🔒';
+  els.lockBtn.classList.toggle('unlocked', on);
+  els.lockBtn.title = on ? '管理模式已解鎖（點擊登出）' : '管理模式';
+  els.fabBtn.classList.toggle('show', on);
+  if(!on){
+    adminToken = '';
+    localStorage.removeItem(TOKEN_KEY);
+  }
+  if(!(opts && opts.silent)) renderFiltered();
+}
+setAdminMode(adminMode, { silent: true });
+
+function openLock(){
+  els.lockMsg.className = 'modal-msg';
+  els.lockMsg.textContent = '';
+  els.lockInput.value = '';
+  els.lockOverlay.classList.add('open');
+  els.lockSubmit.disabled = false;
+  els.lockSubmit.textContent = '解鎖';
+  setTimeout(()=> els.lockInput.focus(), 50);
+}
+function closeLock(){
+  els.lockOverlay.classList.remove('open');
+}
+
+els.lockBtn.addEventListener('click', ()=>{
+  if(adminMode){
+    setAdminMode(false);
+    load(); // 重新讀取清單，私密卡片會被拿掉
+  } else {
+    openLock();
+  }
+});
+els.lockCancel.addEventListener('click', closeLock);
+els.lockOverlay.addEventListener('click', (e)=>{
+  if(e.target === els.lockOverlay) closeLock();
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Escape' && els.lockOverlay.classList.contains('open')) closeLock();
+});
+
+els.lockSubmit.addEventListener('click', async ()=>{
+  const token = els.lockInput.value.trim();
+  if(!token){
+    els.lockMsg.className = 'modal-msg show error';
+    els.lockMsg.textContent = '請輸入通關密語。';
+    return;
+  }
+  els.lockSubmit.disabled = true;
+  els.lockSubmit.textContent = '確認中…';
+
+  try{
+    const data = await jsonpRequest({ action:'verify', token });
+    if(!data.ok) throw new Error(data.error || '密語錯誤。');
+
+    adminToken = token;
+    localStorage.setItem(TOKEN_KEY, token);
+    setAdminMode(true, { silent: true });
+    els.lockMsg.className = 'modal-msg show success';
+    els.lockMsg.textContent = '解鎖成功，正在重新整理…';
+    await load();
+    setTimeout(closeLock, 700);
+  } catch(err){
+    els.lockMsg.className = 'modal-msg show error';
+    els.lockMsg.textContent = err.message || '密語錯誤。';
+    els.lockSubmit.disabled = false;
+    els.lockSubmit.textContent = '解鎖';
+  }
+});
+
+/* ---------- Service worker ---------- */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
