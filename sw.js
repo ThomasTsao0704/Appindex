@@ -1,6 +1,6 @@
 // 每次「有意義的更動」記得把版本號 +1（v2 → v3 ...），
 // 這樣舊訪客的瀏覽器才會確實丟掉舊快取、換上新檔案。
-const CACHE = 'index-shell-v2';
+const CACHE = 'index-shell-v4';
 const SHELL_FILES = [
   './index.html',
   './manifest.webmanifest',
@@ -27,8 +27,12 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // Apps Script API 呼叫：完全不攔截，直接放行給網路。
-  if (url.hostname.includes('script.google.com') || url.hostname.includes('googleusercontent.com')) {
+  // Apps Script API 呼叫、以及線上狀態偵測的探測請求：完全不攔截，直接放行給網路。
+  if (
+    url.hostname.includes('script.google.com') ||
+    url.hostname.includes('googleusercontent.com') ||
+    url.searchParams.has('__indexping')
+  ) {
     return;
   }
 
