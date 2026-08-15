@@ -112,11 +112,6 @@
   /* 文字大小切換鈕：目前不是標準大小時亮起，一眼看得出已放大 */
   #fontBtn .aa{ font-family:var(--font-display); font-weight:700; font-size:16px; letter-spacing:.5px; }
   #fontBtn.on{ color:var(--brass-bright); }
-  #lockBtn.on{ color:var(--brass-bright); }
-  .check{ display:flex; align-items:center; gap:9px; font-size:var(--fs-sm); color:var(--parchment); margin:2px 0 4px; cursor:pointer; }
-  .check input{ width:20px; height:20px; accent-color:var(--brass); }
-  .linkish{ display:block; width:100%; margin-top:12px; background:none; border:none; color:var(--parchment-dim); font-size:var(--fs-2xs); text-decoration:underline; cursor:pointer; min-height:40px; }
-  .linkish[hidden]{ display:none; }
 
   /* 搜尋 */
   .search{ position:relative; margin-top:6px; }
@@ -371,10 +366,7 @@
       <div class="brand-actions">
         <span class="no" id="count" style="margin-right:4px"></span>
         <button class="icon-btn" id="fontBtn" aria-label="調整文字大小"><span class="aa">Aa</span></button>
-        <button class="icon-btn" id="lockBtn" aria-label="編輯模式" aria-pressed="false">
-          <svg id="lockIcon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-        </button>
-        <button class="icon-btn" id="addBtn" aria-label="新增項目" hidden>
+        <button class="icon-btn" id="addBtn" aria-label="新增項目">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
         </button>
         <button class="icon-btn" id="refreshBtn" aria-label="重新讀取目錄">
@@ -451,25 +443,6 @@
   </div>
 </div>
 
-<div class="sheet" id="authSheet" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-  <div class="sheet-bg" data-close="1"></div>
-  <div class="sheet-panel">
-    <div class="sheet-grip"></div>
-    <h3 id="authTitle">進入編輯模式</h3>
-    <div class="field">
-      <label for="fPass">密碼</label>
-      <input id="fPass" type="password" autocomplete="current-password" placeholder="輸入編輯密碼">
-      <div class="hint">解鎖後才會出現「＋」新增鈕和卡片上的編輯鈕。</div>
-    </div>
-    <label class="check"><input id="rememberPass" type="checkbox" checked><span>記住這台裝置</span></label>
-    <div class="sheet-actions">
-      <button class="btn" id="authCancel">取消</button>
-      <button class="btn primary" id="authOk">解鎖</button>
-    </div>
-    <button class="linkish" id="forgetPass" hidden>清除這台裝置記住的密碼</button>
-  </div>
-</div>
-
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -482,7 +455,6 @@ const FAV_KEY   = 'index_favorites_v1';
 const USAGE_KEY = 'index_usage_v1';
 const CACHE_KEY = 'index_cache_v1';
 const SCALE_KEY = 'index_scale_v1';
-const TOKEN_KEY = 'index_token_v1';   // 編輯通行碼，只存在這台裝置上
 
 const els = {
   header:document.getElementById('header'),
@@ -500,14 +472,6 @@ const els = {
   installBtn:document.getElementById('installBtn'),
   fontBtn:document.getElementById('fontBtn'),
   addBtn:document.getElementById('addBtn'),
-  lockBtn:document.getElementById('lockBtn'),
-  lockIcon:document.getElementById('lockIcon'),
-  authSheet:document.getElementById('authSheet'),
-  fPass:document.getElementById('fPass'),
-  rememberPass:document.getElementById('rememberPass'),
-  authOk:document.getElementById('authOk'),
-  authCancel:document.getElementById('authCancel'),
-  forgetPass:document.getElementById('forgetPass'),
   sheet:document.getElementById('sheet'),
   sheetTitle:document.getElementById('sheetTitle'),
   fApp:document.getElementById('fApp'),
@@ -588,9 +552,9 @@ function cardHtml(a){
       ${tags.length ? `<div class="tag-row">${tags.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       <div class="foot">
         <span class="domain">${escapeHtml(domainOf(a.url))}</span>
-        ${(editMode && a.row) ? '' : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.7"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>`}
+        ${a.row ? '' : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.7"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>`}
       </div>
-      ${(editMode && a.row) ? `<button class="edit" data-edit="${a.row}" aria-label="編輯 ${escapeHtml(a.app)}">
+      ${a.row ? `<button class="edit" data-edit="${a.row}" aria-label="編輯 ${escapeHtml(a.app)}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       </button>` : ''}
     </div>`;
@@ -826,64 +790,7 @@ function adoptList(apps){
   render();
 }
 
-let editMode = false;
-let memToken = '';                    // 沒勾「記住」時只留在這次開啟期間
-
-function currentToken(){ return memToken || localStorage.getItem(TOKEN_KEY) || ''; }
-function forgetToken(){ memToken = ''; localStorage.removeItem(TOKEN_KEY); }
-
-function setEditMode(on){
-  editMode = on;
-  els.addBtn.hidden = !on;
-  els.lockBtn.classList.toggle('on', on);
-  els.lockBtn.setAttribute('aria-pressed', String(on));
-  els.lockIcon.innerHTML = on
-    ? '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 7.9-.8"/>'
-    : '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>';
-  if(!on) closeEditor();
-  render();
-}
-
-function openAuth(){
-  els.fPass.value = '';
-  els.forgetPass.hidden = !localStorage.getItem(TOKEN_KEY);
-  els.authSheet.classList.add('open');
-  setTimeout(()=> els.fPass.focus(), 60);
-}
-function closeAuth(){ els.authSheet.classList.remove('open'); }
-
-async function unlock(pass, remember){
-  if(busy) return;
-  pass = (pass || '').trim();
-  if(!pass){ toast('請輸入密碼。'); return; }
-
-  busy = true;
-  els.authOk.disabled = true;
-  els.authOk.textContent = '確認中…';
-  try{
-    const res = await api({ action:'auth', token:pass }, 20000);
-    if(!res || !res.ok){
-      toast(res && res.error === 'AUTH' ? '密碼不正確。' : '驗證失敗，請稍後再試。');
-      els.fPass.value = '';
-      return;
-    }
-    forgetToken();
-    if(remember) localStorage.setItem(TOKEN_KEY, pass); else memToken = pass;
-    if(res.apps) adoptList(res.apps);
-    closeAuth();
-    setEditMode(true);
-    toast('編輯模式已開啟。');
-  }catch(err){
-    toast('連不上目錄服務，檢查網路後再試一次。');
-  }finally{
-    busy = false;
-    els.authOk.disabled = false;
-    els.authOk.textContent = '解鎖';
-  }
-}
-
 function openEditor(app){
-  if(!editMode) return;
   editing = app || null;
   els.sheetTitle.textContent = editing ? '編輯項目' : '新增項目';
   els.fApp.value  = editing ? editing.app : '';
@@ -900,7 +807,6 @@ function closeEditor(){
 }
 
 const ERRORS = {
-  AUTH:'通行碼不正確，請再試一次。',
   EMPTY:'名稱和網址都要填。',
   BAD_URL:'網址要以 http:// 或 https:// 開頭。',
   STALE:'這一筆在試算表被改動過了，請先重新讀取再編輯。',
@@ -915,15 +821,11 @@ async function submitEditor(){
   if(!app || !url){ toast(ERRORS.EMPTY); return; }
   if(!/^https?:\/\//i.test(url)){ toast(ERRORS.BAD_URL); return; }
 
-  const token = currentToken();
-  if(!token){ setEditMode(false); openAuth(); return; }
-
   const params = {
     action: editing ? 'update' : 'create',
     app, url,
     describe: els.fDesc.value.trim(),
     tags: els.fTags.value.trim(),
-    token,
   };
   if(editing){ params.row = editing.row; params.expect = editing.app; }
 
@@ -934,7 +836,6 @@ async function submitEditor(){
     const res = await api(params, 20000);
     if(!res || !res.ok){
       const code = res && res.error;
-      if(code === 'AUTH'){ forgetToken(); setEditMode(false); openAuth(); }
       toast(ERRORS[code] || '存不進去，請稍後再試。');
       return;
     }
@@ -954,16 +855,12 @@ async function deleteEntry(){
   if(busy || !editing) return;
   if(!window.confirm(`刪除「${editing.app}」？試算表裡的這一列會一起移除。`)) return;
 
-  const token = currentToken();
-  if(!token){ setEditMode(false); openAuth(); return; }
-
   busy = true;
   els.deleteBtn.disabled = true;
   try{
-    const res = await api({ action:'delete', row:editing.row, expect:editing.app, token }, 20000);
+    const res = await api({ action:'delete', row:editing.row, expect:editing.app }, 20000);
     if(!res || !res.ok){
       const code = res && res.error;
-      if(code === 'AUTH'){ forgetToken(); setEditMode(false); openAuth(); }
       toast(ERRORS[code] || '刪不掉，請稍後再試。');
       return;
     }
@@ -984,27 +881,9 @@ els.cancelBtn.addEventListener('click', closeEditor);
 els.deleteBtn.addEventListener('click', deleteEntry);
 els.sheet.addEventListener('click', e=>{ if(e.target.dataset.close) closeEditor(); });
 
-els.lockBtn.addEventListener('click', ()=>{
-  if(editMode){ setEditMode(false); toast('已鎖定。'); return; }
-  if(localStorage.getItem(TOKEN_KEY)){ setEditMode(true); toast('編輯模式已開啟。'); return; }
-  openAuth();
-});
-els.authOk.addEventListener('click', ()=> unlock(els.fPass.value, els.rememberPass.checked));
-els.authCancel.addEventListener('click', closeAuth);
-els.fPass.addEventListener('keydown', e=>{ if(e.key === 'Enter') unlock(els.fPass.value, els.rememberPass.checked); });
-els.forgetPass.addEventListener('click', ()=>{
-  forgetToken(); setEditMode(false); els.forgetPass.hidden = true;
-  toast('已清除這台裝置記住的密碼。');
-});
-els.authSheet.addEventListener('click', e=>{ if(e.target.dataset.close) closeAuth(); });
-
 document.addEventListener('keydown', e=>{
-  if(e.key !== 'Escape') return;
-  if(els.sheet.classList.contains('open')) closeEditor();
-  else if(els.authSheet.classList.contains('open')) closeAuth();
+  if(e.key === 'Escape' && els.sheet.classList.contains('open')) closeEditor();
 });
-
-setEditMode(false);
 
 /* ---------- 安裝到主畫面 ---------- */
 let deferredPrompt;
