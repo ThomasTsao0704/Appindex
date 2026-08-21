@@ -543,7 +543,6 @@ const els = {
   detailDesc:document.getElementById('detailDesc'),
   detailDomain:document.getElementById('detailDomain'),
   detailOpenBtn:document.getElementById('detailOpenBtn'),
-  detailEditBtn:document.getElementById('detailEditBtn'),
 };
 
 let allApps = [];
@@ -859,7 +858,6 @@ function openDetail(app){
   els.detailDesc.textContent = app.describe || '（尚無說明）';
   els.detailDomain.textContent = domainOf(app.url);
   els.detailOpenBtn.href = app.url;
-  els.detailEditBtn.hidden = !app.row;   // 沒有 row（無法編輯）時不顯示編輯鈕
   els.detailSheet.classList.add('open');
 }
 function closeDetail(){
@@ -869,11 +867,6 @@ function closeDetail(){
 
 els.detailOpenBtn.addEventListener('click', ()=>{
   if(detailApp) trackUsage(keyOf(detailApp));   // 打開網站才算一次使用（維持「常用」排序）
-});
-els.detailEditBtn.addEventListener('click', ()=>{
-  const app = detailApp;
-  closeDetail();
-  openEditor(app);
 });
 els.detailSheet.addEventListener('click', e=>{ if(e.target.dataset.close) closeDetail(); });
 
