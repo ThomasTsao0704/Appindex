@@ -83,10 +83,10 @@
 
   .brand{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    max-height:64px;
+    max-height:64px; overflow :hidden;
     transition:max-height .18s ease, opacity .18s ease, margin .18s ease;
   }
-  header.compact .brand{ max-height:0; opacity:0; margin-bottom:-6px; }
+  
   .brand-mark{ display:flex; align-items:baseline; gap:8px; }
   .brand-mark h1{
     font-family:var(--font-display); font-weight:700;
@@ -829,7 +829,7 @@ els.clearSearch.addEventListener('click', ()=>{
   els.search.focus();
 });
 
-/* ---------- 捲動時收合品牌列，換更多內容空間 ---------- */
+/* ---------- 捲動時收合品牌列，換更多內容空間 
 let lastY = 0, ticking = false;
 const COLLAPSE_AT = 90;   // 捲過這個距離才開始收合
 const DELTA = 10;         // 單次捲動要超過這個量才反應，避免臨界值來回抖動
@@ -850,6 +850,7 @@ window.addEventListener('scroll', ()=>{
     ticking = false;
   });
 }, { passive:true });
+---------- */
 
 /* 讓 A–Z 跳頁不被吸頂列擋住 */
 const syncHeaderHeight = ()=>
