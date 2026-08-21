@@ -643,24 +643,48 @@ els.main.addEventListener('click', (e)=>{
 /* ---------- 篩選與排序 ---------- */
 function computeFiltered(){
   const q = els.search.value.trim().toLowerCase();
-  let list = allApps.filter(a=>{
-    const okHidden = !a.app.trim().startsWith('Hidden');   // @ 開頭 → 隱藏
-    const okQ = !q
-      || a.app.toLowerCase().includes(q)
-      || (a.describe||'').toLowerCase().includes(q)
-      || (a.tags||[]).some(t=> t.toLowerCase().includes(q));
-    const okT = activeTags.size === 0 || (a.tags||[]).some(t=> activeTags.has(t));
-    return okQ && okT;
-    });
-    if(view === 'fav') list = list.filter(a=> favorites.has(keyOf(a)));
-    if(view === 'popular') list = list.filter(a=> usage[keyOf(a)]);
- 
-    if(view === 'recent')       list.sort((a,b)=> b.id - a.id);
-    else if(view === 'popular') list.sort((a,b)=> (usage[keyOf(b)]||0) - (usage[keyOf(a)]||0));
-    else                        list.sort((a,b)=> a.app.localeCompare(b.app, 'zh-Hant'));
-    return list;
-  }
 
+  let list = allApps.filter(a => {
+
+    const appName = (a.app || '').trim();
+
+    // @ 或 ＠ 開頭 → 隱藏
+    const okHidden = !/^[＠@]/.test(appName);
+
+    const okQ =
+      !q
+      || appName.toLowerCase().includes(q)
+      || (a.describe || '').toLowerCase().includes(q)
+      || (a.tags || []).some(t => t.toLowerCase().includes(q));
+
+    const okT =
+      activeTags.size === 0 ||
+      (a.tags || []).some(t => activeTags.has(t));
+
+    return okHidden && okQ && okT;
+  });
+
+  if(view === 'fav')
+    list = list.filter(a => favorites.has(keyOf(a)));
+
+  if(view === 'popular')
+    list = list.filter(a => usage[keyOf(a)]);
+
+  if(view === 'recent')
+    list.sort((a,b) => b.id - a.id);
+
+  else if(view === 'popular')
+    list.sort((a,b) =>
+      (usage[keyOf(b)] || 0) - (usage[keyOf(a)] || 0)
+    );
+
+  else
+    list.sort((a,b) =>
+      a.app.localeCompare(b.app, 'zh-Hant')
+    );
+
+  return list;
+}
 function groupByLetter(apps){
   const g = {};
   apps.forEach(a=>{
