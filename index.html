@@ -270,6 +270,8 @@
     background:rgba(22,33,27,.94); backdrop-filter:blur(10px);
     border-top:1px solid var(--panel-line);
     padding-bottom:env(safe-area-inset-bottom, 0px);
+    transform:translateZ(0);            /* ← 新增：獨立圖層，捲動時較穩 */
+    -webkit-transform:translateZ(0);    /* ← 新增 */
   }
   .tabbar button{
     background:none; border:none; color:var(--parchment-dim); cursor:pointer;
@@ -751,13 +753,22 @@ els.clearSearch.addEventListener('click', ()=>{
 
 /* ---------- 捲動時收合品牌列，換更多內容空間 ---------- */
 let lastY = 0, ticking = false;
+const COLLAPSE_AT = 90;   // 捲過這個距離才開始收合
+const DELTA = 10;         // 單次捲動要超過這個量才反應，避免臨界值來回抖動
+
 window.addEventListener('scroll', ()=>{
   if(ticking) return;
   ticking = true;
   requestAnimationFrame(()=>{
-    const y = window.scrollY;
-    els.header.classList.toggle('compact', y > 60 && y > lastY);
-    lastY = y;
+    const y = Math.max(0, window.scrollY);
+    if(y <= COLLAPSE_AT){
+      els.header.classList.remove('compact');   // 靠近頂端一律展開
+    }else if(y - lastY > DELTA){
+      els.header.classList.add('compact');       // 明顯往下捲 → 收合
+    }else if(lastY - y > DELTA){
+      els.header.classList.remove('compact');    // 明顯往上捲 → 展開
+    }
+    if(Math.abs(y - lastY) > DELTA || y <= COLLAPSE_AT) lastY = y;
     ticking = false;
   });
 }, { passive:true });
