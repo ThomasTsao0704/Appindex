@@ -644,7 +644,7 @@ els.main.addEventListener('click', (e)=>{
 function computeFiltered(){
   const q = els.search.value.trim().toLowerCase();
   let list = allApps.filter(a=>{
-    const okHidden = !a.app.trim().startsWith('@','＠');   // @ 開頭 → 隱藏
+    const okHidden = !a.app.trim().startsWith('Hidden');   // @ 開頭 → 隱藏
     const okQ = !q
       || a.app.toLowerCase().includes(q)
       || (a.describe||'').toLowerCase().includes(q)
