@@ -83,7 +83,7 @@
 
   .brand{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    max-height:64px; overflow:hidden;
+    max-height:64px;
     transition:max-height .18s ease, opacity .18s ease, margin .18s ease;
   }
   header.compact .brand{ max-height:0; opacity:0; margin-bottom:-6px; }
@@ -397,6 +397,14 @@
         <h1>INDEX</h1>
         <span class="tab">目錄</span>
       </div>
+      <div class="search" id="searchWrap">
+      <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="searchInput" type="search" inputmode="search" enterkeyhint="search"
+             placeholder="搜尋名稱、說明或標籤…" autocomplete="off" autocorrect="off" autocapitalize="off">
+      <button class="clear" id="clearSearch" aria-label="清除搜尋">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      </div>
       <div class="brand-actions">
         <button class="icon-btn" id="addBtn" aria-label="新增項目">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
@@ -409,14 +417,6 @@
         <button class="icon-btn accent" id="installBtn" aria-label="安裝到主畫面" hidden>
           <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
         </button>
-      </div>
-      <div class="search" id="searchWrap">
-      <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="searchInput" type="search" inputmode="search" enterkeyhint="search"
-             placeholder="搜尋名稱、說明或標籤…" autocomplete="off" autocorrect="off" autocapitalize="off">
-      <button class="clear" id="clearSearch" aria-label="清除搜尋">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
       </div>
     </div>
     <nav class="chips" id="chips" aria-label="標籤篩選"></nav>
