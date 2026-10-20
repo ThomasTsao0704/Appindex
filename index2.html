@@ -15,7 +15,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="INDEX">
 
-<!-- 只保留一套標題字型（中文本來就會落到系統字型，載三套是純浪費） -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
@@ -27,26 +26,26 @@
     --panel-hi:#26362c;
     --panel-line:#33453a;
     --parchment:#E8DFC8;
-    --parchment-dim:#b7b19a;      /* 提高對比，小字才看得清楚 */
+    --parchment-dim:#b7b19a;
     --brass:#C89B3C;
     --brass-bright:#e0b658;
     --rust:#C4573B;
     --radius:14px;
+    --ease:cubic-bezier(.2,.8,.2,1);
 
-    /* ── 文字大小：一個旋鈕控制全站 ──
-       1 = 標準、1.15 = 大、1.3 = 特大（右上角「Aa」按鈕可即時切換） */
+    /* 文字大小：1 = 標準、1.15 = 大、1.3 = 特大 */
     --scale:1;
-    --fs-2xs:calc(11.5px * var(--scale));   /* 編號、網域、標籤 */
-    --fs-xs: calc(13.5px * var(--scale));   /* 篩選膠囊、分頁列 */
-    --fs-sm: calc(14.5px * var(--scale));   /* 卡片說明 */
-    --fs-md: calc(16px   * var(--scale));   /* 分區標題 */
-    --fs-lg: calc(18px   * var(--scale));   /* 卡片名稱 */
+    --fs-2xs:calc(11.5px * var(--scale));
+    --fs-xs: calc(13.5px * var(--scale));
+    --fs-sm: calc(14.5px * var(--scale));
+    --fs-md: calc(16px   * var(--scale));
+    --fs-lg: calc(18px   * var(--scale));
 
     --font-display:'Fraunces', Georgia, 'Noto Serif TC', serif;
     --font-body:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC',
                 'PingFang TC', 'Microsoft JhengHei', sans-serif;
     --font-mono:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    --header-h:150px;
+    --header-h:150px;   /* 由 JS 依實際高度更新 */
     --bar-h:calc(58px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -57,12 +56,14 @@
     background:
       radial-gradient(900px 500px at 15% -10%, #1b2a20 0%, transparent 60%),
       var(--ink);
+    background-attachment:fixed;
     color:var(--parchment);
     font-family:var(--font-body);
     min-height:100dvh;
     overscroll-behavior-y:none;
     -webkit-font-smoothing:antialiased;
   }
+  html.locked, html.locked body{ overflow:hidden; }   /* 視窗開啟時鎖住背景捲動 */
   @media (prefers-reduced-motion: reduce){
     html{ scroll-behavior:auto; }
     *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
@@ -70,62 +71,80 @@
   a{ color:inherit; text-decoration:none; }
   button, select, input{ font-family:inherit; }
   :focus-visible{ outline:2px solid var(--brass); outline-offset:2px; }
+  mark{ background:rgba(200,155,60,.3); color:inherit; border-radius:3px; padding:0 1px; }
 
-  /* ================= 頂部：捲動時自動收合品牌列 ================= */
+  /* ================= 頂部：往下捲自動藏起、往上捲立刻出現 ================= */
   header{
-    position:sticky; top:0; z-index:30;
-    background:rgba(22,33,27,.92);
-    backdrop-filter:blur(10px);
+    position:fixed; top:0; left:0; right:0; z-index:30;
+    background:rgba(22,33,27,.9);
+    backdrop-filter:blur(12px) saturate(1.2);
+    -webkit-backdrop-filter:blur(12px) saturate(1.2);
     border-bottom:1px solid var(--panel-line);
     padding:calc(10px + env(safe-area-inset-top, 0px)) 14px 8px;
+    transition:transform .28s var(--ease), box-shadow .28s ease;
+    will-change:transform;
   }
+  header.hide{ transform:translateY(-100%); }
+  header.scrolled{ box-shadow:0 8px 24px rgba(0,0,0,.28); }
   .wrap{ max-width:1100px; margin:0 auto; }
 
+  /* 手機：品牌＋按鈕一排、搜尋獨立一排；寬螢幕：三者同一排 */
   .brand{
-    display:flex; align-items:center; justify-content:space-between; gap:10px;
-    max-height:64px; overflow:hidden;
-    transition:max-height .18s ease, opacity .18s ease, margin .18s ease;
+    display:grid; grid-template-columns:auto 1fr auto;
+    grid-template-areas:"mark . actions" "search search search";
+    align-items:center; column-gap:10px;
   }
-  header.compact .brand{ max-height:0; opacity:0; margin-bottom:-6px; }
-  .brand-mark{ display:flex; align-items:baseline; gap:8px; }
+  @media (min-width:720px){
+    .brand{ grid-template-areas:"mark search actions"; column-gap:18px; }
+  }
+  .brand-mark{ grid-area:mark; display:flex; align-items:baseline; gap:8px; }
   .brand-mark h1{
     font-family:var(--font-display); font-weight:700;
     font-size:calc(26px * var(--scale));
-    letter-spacing:.5px; margin:0;
+    letter-spacing:.5px; margin:0; cursor:pointer;
   }
   .brand-mark .tab{
     font-family:var(--font-mono); font-size:calc(10.5px * var(--scale));
     letter-spacing:1.5px;
     background:var(--brass); color:var(--ink); padding:2px 7px; border-radius:4px;
   }
-  .brand-actions{ display:flex; align-items:center; gap:4px; }
+  .brand-actions{ grid-area:actions; display:flex; align-items:center; gap:2px; }
   .icon-btn{
     width:44px; height:44px; display:grid; place-items:center;
     background:none; border:none; color:var(--parchment-dim); border-radius:10px;
-    cursor:pointer;
+    cursor:pointer; transition:background .15s ease, color .15s ease;
   }
   .icon-btn:active{ background:var(--panel-hi); color:var(--brass-bright); }
+  @media (hover:hover){ .icon-btn:hover{ background:var(--panel-hi); color:var(--parchment); } }
   .icon-btn.accent{ color:var(--brass-bright); }
   .icon-btn[hidden]{ display:none; }
   .icon-btn.spin svg{ animation:spin .7s linear infinite; }
   @keyframes spin{ to{ transform:rotate(360deg); } }
-  /* 文字大小切換鈕：目前不是標準大小時亮起，一眼看得出已放大 */
   #fontBtn .aa{ font-family:var(--font-display); font-weight:700; font-size:16px; letter-spacing:.5px; }
   #fontBtn.on{ color:var(--brass-bright); }
 
   /* 搜尋 */
-  .search{ position:relative; margin-top:6px; }
+  .search{ grid-area:search; position:relative; margin-top:6px; width:100%; }
+  @media (min-width:720px){ .search{ margin-top:0; max-width:520px; justify-self:center; } }
   .search input{
     width:100%; background:var(--panel); border:1px solid var(--panel-line);
     color:var(--parchment);
     font-size:max(16px, var(--fs-sm)); /* 16px 才不會讓 iOS 自動放大頁面 */
-    padding:13px 46px 13px 40px; border-radius:12px; outline:none;
+    padding:12px 46px 12px 40px; border-radius:12px; outline:none;
     appearance:none; -webkit-appearance:none;
+    transition:border-color .15s ease, background .15s ease;
   }
   .search input::-webkit-search-cancel-button{ display:none; }
   .search input::placeholder{ color:var(--parchment-dim); }
-  .search input:focus{ border-color:var(--brass); }
-  .search .ico{ position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.6; }
+  .search input:focus{ border-color:var(--brass); background:var(--panel-hi); }
+  .search .ico{ position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.6; pointer-events:none; }
+  .search .kbd{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    font-family:var(--font-mono); font-size:11px; color:var(--parchment-dim);
+    border:1px solid var(--panel-line); border-radius:5px; padding:1px 6px; pointer-events:none;
+  }
+  @media (hover:none){ .search .kbd{ display:none; } }
+  .search.filled .kbd, .search input:focus ~ .kbd{ display:none; }
   .search .clear{
     position:absolute; right:2px; top:50%; transform:translateY(-50%);
     width:44px; height:44px; display:none; place-items:center;
@@ -133,52 +152,62 @@
   }
   .search.filled .clear{ display:grid; }
 
-  /* 篩選膠囊：單排橫向捲動，不再佔第二、三排高度 */
+  /* 篩選膠囊：單排橫向捲動，兩端淡出提示還能滑 */
+  .chips, .rail{
+    -webkit-mask-image:linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 20px), transparent);
+            mask-image:linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 20px), transparent);
+  }
   .chips{
     display:flex; gap:6px; overflow-x:auto; margin-top:8px;
-    padding-bottom:2px; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+    padding:0 12px 2px; scrollbar-width:none; -webkit-overflow-scrolling:touch;
   }
+  .chips:empty{ display:none; }
   .chips::-webkit-scrollbar{ display:none; }
   .chips button{
     flex:0 0 auto; background:transparent; border:1px solid var(--panel-line);
-    color:var(--parchment-dim); font-size:var(--fs-xs); padding:8px 14px;
-    border-radius:999px; cursor:pointer; min-height:38px;
+    color:var(--parchment-dim); font-size:var(--fs-xs); padding:7px 14px;
+    border-radius:999px; cursor:pointer; min-height:36px;
+    transition:background .15s ease, color .15s ease, border-color .15s ease;
   }
   .chips button.active{ background:var(--brass); border-color:var(--brass); color:var(--ink); font-weight:600; }
   .chips button.clear-tags{ color:var(--rust); border-color:transparent; }
 
-  /* A–Z 快速跳頁 */
+  /* A–Z 快速跳頁：目前所在的字母會亮起 */
   .rail{
-    display:flex; gap:2px; overflow-x:auto; margin-top:6px;
+    display:flex; gap:2px; overflow-x:auto; margin-top:6px; padding:0 12px;
     scrollbar-width:none; -webkit-overflow-scrolling:touch;
   }
   .rail::-webkit-scrollbar{ display:none; }
   .rail[hidden]{ display:none; }
   .rail button{
-    flex:0 0 auto; min-width:36px; height:36px;
+    flex:0 0 auto; min-width:34px; height:34px;
     background:none; border:none; color:var(--parchment-dim);
     font-family:var(--font-mono); font-size:var(--fs-xs); border-radius:8px; cursor:pointer;
+    transition:background .15s ease, color .15s ease;
   }
+  .rail button.on{ color:var(--brass-bright); background:var(--panel-hi); font-weight:700; }
   .rail button:active{ background:var(--brass); color:var(--ink); }
 
   /* ================= 內容 ================= */
   main{
     max-width:1100px; margin:0 auto;
-    padding:14px 14px calc(var(--bar-h) + 24px);
+    padding-top:calc(var(--header-h) + 14px);
+    padding-left:14px; padding-right:14px;
+    padding-bottom:calc(var(--bar-h) + 24px);
   }
   .section-label{
     font-family:var(--font-display); font-weight:600; font-size:var(--fs-md);
-    color:var(--brass); margin:22px 0 10px; display:flex; align-items:center; gap:10px;
-    scroll-margin-top:calc(var(--header-h) + 8px);
+    color:var(--brass); margin:24px 0 10px; display:flex; align-items:center; gap:10px;
+    scroll-margin-top:calc(var(--header-h) + 10px);
   }
   .section-label::after{ content:''; flex:1; height:1px; background:var(--panel-line); }
-  .section-label:first-child{ margin-top:2px; }
+  .section-label .n{ font-family:var(--font-mono); font-size:var(--fs-2xs); color:var(--parchment-dim); font-weight:400; }
+  .section-label:first-child, .offline + .section-label{ margin-top:2px; }
 
-  /* 欄寬跟著文字放大：字調大時會自動從兩欄變一欄，不會擠成一團 */
   .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(calc(150px * var(--scale)),1fr)); gap:10px; }
   @media (min-width:520px){
     .grid{ grid-template-columns:repeat(auto-fill, minmax(calc(220px * var(--scale)),1fr)); gap:14px; }
-    main{ padding:20px 20px 40px; }
+    main{ padding-left:20px; padding-right:20px; padding-top:calc(var(--header-h) + 20px); }
   }
 
   .card{
@@ -186,7 +215,7 @@
     border:1px solid var(--panel-line); border-radius:var(--radius);
     padding:15px 13px 12px; display:flex; flex-direction:column; gap:7px;
     min-height:calc(140px * var(--scale));
-    transition:transform .12s ease, border-color .12s ease;
+    transition:transform .16s var(--ease), border-color .16s ease, box-shadow .16s ease;
   }
   .card::before{
     content:''; position:absolute; top:-1px; right:14px; width:28px; height:7px;
@@ -196,13 +225,22 @@
   @media (hover:hover){
     .card:hover{ transform:translateY(-3px); border-color:var(--brass); box-shadow:0 10px 24px rgba(0,0,0,.35); }
   }
-  .stretched-link{ position:absolute; inset:0; z-index:1; border-radius:inherit; }
-  .card > *:not(.stretched-link):not(.star){ position:relative; z-index:2; pointer-events:none; }
+  /* 切換分頁 / 篩選時，卡片依序淡入 */
+  .enter .card{ animation:fadeUp .32s var(--ease) both; animation-delay:calc(var(--i, 0) * 22ms); }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(8px); } }
+
+  .stretched-link{
+    position:absolute; inset:0; z-index:1; border-radius:inherit;
+    background:none; border:none; padding:0; margin:0; cursor:pointer;
+    appearance:none; -webkit-appearance:none;
+  }
+  .card > *:not(.stretched-link):not(.star):not(.edit){ position:relative; z-index:2; pointer-events:none; }
+  .card > .card-actions{ z-index:3; }
 
   .no{ font-family:var(--font-mono); font-size:var(--fs-2xs); color:var(--parchment-dim); letter-spacing:1px; }
   .card h2{
     font-family:var(--font-display); font-weight:600; font-size:var(--fs-lg); margin:0;
-    line-height:1.35; overflow-wrap:anywhere; padding-right:40px; /* 讓開右上角星星 */
+    line-height:1.35; overflow-wrap:anywhere; padding-right:40px;
   }
   .card p{
     font-size:var(--fs-sm); line-height:1.55; color:var(--parchment-dim); margin:0; flex:1;
@@ -214,14 +252,28 @@
     border:1px solid var(--panel-line); padding:3px 8px; border-radius:999px;
   }
   .foot{
-    display:flex; align-items:center; justify-content:space-between; gap:6px;
+    display:flex; align-items:flex-end; justify-content:space-between; gap:6px;
     padding-top:8px; border-top:1px dashed var(--panel-line);
   }
+  /* 完整網址：不截斷，長網址自動換行 */
   .domain{
     font-family:var(--font-mono); font-size:var(--fs-2xs); color:var(--brass-bright);
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    line-height:1.45; word-break:break-all; overflow-wrap:anywhere;
   }
-  /* 星星：44×44 的觸控範圍，圖示維持小巧 */
+  .foot svg{ flex:0 0 auto; }
+
+  /* README 按鈕 */
+  .card-actions{ display:flex; }
+  .readme-btn{
+    position:relative; z-index:3; pointer-events:auto;
+    display:inline-flex; align-items:center; gap:5px;
+    min-height:32px; padding:5px 11px; border-radius:999px; cursor:pointer;
+    background:rgba(200,155,60,.1); border:1px solid rgba(200,155,60,.45);
+    color:var(--brass-bright); font-size:var(--fs-2xs); font-weight:600; letter-spacing:.3px;
+    transition:background .15s ease;
+  }
+  .readme-btn:active{ background:rgba(200,155,60,.28); }
+  @media (hover:hover){ .readme-btn:hover{ background:rgba(200,155,60,.22); } }
   .star{
     position:absolute; top:0; right:0; z-index:3;
     width:44px; height:44px; display:grid; place-items:center;
@@ -231,9 +283,11 @@
   }
   .star.active{ color:var(--brass); }
   .star:active{ transform:scale(1.25); }
+  .star.pop{ animation:pop .3s var(--ease); }
+  @keyframes pop{ 50%{ transform:scale(1.4); } }
 
   /* ================= 狀態 ================= */
-  .state{ text-align:center; padding:56px 16px; color:var(--parchment-dim); }
+  .state{ text-align:center; padding:56px 16px; color:var(--parchment-dim); animation:fadeUp .3s var(--ease) both; }
   .state h3{ font-family:var(--font-display); color:var(--parchment); font-size:calc(20px * var(--scale)); margin:0 0 8px; }
   .state p{ font-size:var(--fs-sm); margin:0 0 16px; line-height:1.7; }
   .state code{ font-family:var(--font-mono); background:var(--panel); padding:2px 6px; border-radius:4px; }
@@ -250,7 +304,6 @@
   }
   @keyframes shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
 
-  /* 離線提示 */
   .offline{
     display:none; align-items:center; gap:8px; margin:0 0 12px;
     background:rgba(196,87,59,.12); border:1px solid rgba(196,87,59,.4);
@@ -259,30 +312,183 @@
   }
   .offline.show{ display:flex; }
 
-  /* ================= 底部分頁列（拇指區） ================= */
+  /* ================= 底部分頁列 ================= */
   .tabbar{
     position:fixed; left:0; right:0; bottom:0; z-index:40;
     display:grid; grid-template-columns:repeat(4,1fr);
-    background:rgba(22,33,27,.94); backdrop-filter:blur(10px);
+    background:rgba(22,33,27,.94);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
     border-top:1px solid var(--panel-line);
     padding-bottom:env(safe-area-inset-bottom, 0px);
+    transform:translateZ(0); -webkit-transform:translateZ(0);
   }
   .tabbar button{
     background:none; border:none; color:var(--parchment-dim); cursor:pointer;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:3px; height:58px; font-size:var(--fs-xs);
+    gap:4px; height:58px; font-size:var(--fs-xs);
+    transition:color .15s ease;
   }
   .tabbar button.active{ color:var(--brass-bright); font-weight:600; }
-  .tabbar .dot{ width:4px; height:4px; border-radius:50%; background:transparent; }
-  .tabbar button.active .dot{ background:var(--brass); }
+  .tabbar .dot{ width:16px; height:3px; border-radius:2px; background:transparent; transition:background .2s ease, width .2s var(--ease); }
+  .tabbar button.active .dot{ background:var(--brass); width:22px; }
   @media (min-width:900px){
     .tabbar{ position:sticky; max-width:1100px; margin:0 auto 20px; border-radius:14px; border:1px solid var(--panel-line); bottom:20px; }
+    main{ padding-bottom:24px; }
   }
 
-  footer{
-    text-align:center; padding:4px 20px 0; color:var(--parchment-dim);
-    font-family:var(--font-mono); font-size:var(--fs-2xs); opacity:.6;
+  /* ================= 卡片上的鉛筆 ================= */
+  .edit{
+    position:absolute; right:2px; bottom:0; z-index:3;
+    width:44px; height:44px; display:grid; place-items:center;
+    background:none; border:none; cursor:pointer;
+    color:#5d7466; padding:0;
   }
+  .edit:active{ color:var(--brass-bright); }
+
+  /* ================= 視窗（詳細 / 編輯 共用） ================= */
+  .sheet{ position:fixed; inset:0; z-index:60; display:none; }
+  .sheet.open{ display:block; }
+  .sheet-bg{ position:absolute; inset:0; background:rgba(9,14,11,.62); animation:fadeIn .2s ease both; }
+  @keyframes fadeIn{ from{ opacity:0; } }
+  .sheet-panel{
+    --drag:0px;
+    position:absolute; left:0; right:0; bottom:0;
+    max-height:90dvh; overflow-y:auto; overscroll-behavior:contain;
+    background:var(--panel); border-top:1px solid var(--panel-line);
+    border-radius:18px 18px 0 0;
+    padding:14px 16px calc(18px + env(safe-area-inset-bottom, 0px));
+    transform:translateY(var(--drag));
+    animation:rise .26s var(--ease) both;
+  }
+  .sheet-panel.dragging{ transition:none; }
+  .sheet-panel.snap{ transition:transform .22s var(--ease); }
+  @keyframes rise{ from{ transform:translateY(40px); opacity:0; } }
+  .sheet.closing .sheet-bg{ animation:fadeOut .18s ease both; }
+  .sheet.closing .sheet-panel{ animation:sink .18s ease both; }
+  @keyframes fadeOut{ to{ opacity:0; } }
+  @keyframes sink{ to{ transform:translateY(calc(var(--drag) + 40px)); opacity:0; } }
+  @media (min-width:640px){
+    .sheet-panel{
+      left:50%; right:auto; bottom:auto; top:8vh;
+      transform:translate(-50%, var(--drag));
+      width:min(520px, 92vw); border-radius:18px; border:1px solid var(--panel-line);
+      animation-name:riseC;
+    }
+    .sheet.closing .sheet-panel{ animation-name:sinkC; }
+    @keyframes riseC{ from{ transform:translate(-50%, 14px) scale(.98); opacity:0; } }
+    @keyframes sinkC{ to{ transform:translate(-50%, 10px) scale(.98); opacity:0; } }
+  }
+  .sheet-grip{ width:40px; height:4px; border-radius:999px; background:var(--panel-line); margin:0 auto 12px; }
+  .sheet-x{
+    position:absolute; top:6px; right:6px;
+    width:44px; height:44px; display:grid; place-items:center;
+    background:none; border:none; color:var(--parchment-dim); cursor:pointer; border-radius:10px;
+  }
+  .sheet-x:active{ background:var(--panel-hi); }
+  .sheet h3{
+    font-family:var(--font-display); font-size:var(--fs-md); color:var(--brass);
+    margin:0 0 12px;
+  }
+  .field{ margin-bottom:12px; }
+  .field label{
+    display:block; font-size:var(--fs-2xs); letter-spacing:.5px;
+    color:var(--parchment-dim); font-family:var(--font-mono); margin-bottom:5px;
+  }
+  .field input, .field textarea{
+    width:100%; background:var(--ink); border:1px solid var(--panel-line);
+    color:var(--parchment); border-radius:10px; padding:12px;
+    font-size:max(16px, var(--fs-sm)); line-height:1.5; outline:none;
+    appearance:none; -webkit-appearance:none;
+  }
+  .field textarea{ resize:vertical; min-height:150px; line-height:1.6; }
+  .field input:focus, .field textarea:focus{ border-color:var(--brass); }
+  .field .hint{ font-size:var(--fs-2xs); color:var(--parchment-dim); margin-top:5px; }
+  .sheet-actions{ display:flex; gap:8px; margin-top:16px; }
+  .btn{
+    flex:1; min-height:48px; border-radius:12px; cursor:pointer;
+    font-size:var(--fs-sm); font-weight:600; border:1px solid var(--panel-line);
+    background:transparent; color:var(--parchment);
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn[hidden]{ display:none; }
+  .btn.primary{ background:var(--brass); border-color:var(--brass); color:var(--ink); }
+  .btn.primary[disabled]{ opacity:.55; }
+  .btn.danger{ flex:0 0 auto; width:52px; color:var(--rust); font-weight:400; }
+  .btn.danger[hidden]{ display:none; }
+
+  #detailNo{ display:block; margin-bottom:6px; }
+  #detailTitle{
+    font-family:var(--font-display); font-weight:600;
+    font-size:var(--fs-lg); color:var(--parchment);
+    margin:2px 44px 10px 0; line-height:1.35; overflow-wrap:anywhere;
+  }
+  #detailTags{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  #detailTags:empty{ display:none; }
+  #detailDesc{
+    font-size:var(--fs-sm); line-height:1.75; color:var(--parchment);
+    margin:0 0 14px; white-space:pre-wrap; overflow-wrap:anywhere;
+  }
+  #detailDomain{
+    display:block;
+    font-family:var(--font-mono); font-size:var(--fs-xs); line-height:1.5;
+    color:var(--brass-bright); margin-bottom:2px;
+    word-break:break-all; overflow-wrap:anywhere;
+    padding:10px 12px; border-radius:10px; background:var(--ink); border:1px solid var(--panel-line);
+  }
+  #detailDomain:active{ border-color:var(--brass); }
+  .btn.ghost-brass{ border-color:rgba(200,155,60,.55); color:var(--brass-bright); }
+
+  /* ================= README PDF 檢視視窗 ================= */
+  #viewer{ z-index:65; }
+  #viewer .sheet-panel{
+    top:calc(8px + env(safe-area-inset-top, 0px)); max-height:none;
+    display:flex; flex-direction:column; padding:0; overflow:hidden;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  @media (min-width:640px){
+    #viewer .sheet-panel{ top:4vh; bottom:4vh; width:min(980px, 94vw); }
+  }
+  .viewer-head{
+    display:flex; align-items:center; gap:4px;
+    padding:8px 6px 8px 16px; border-bottom:1px solid var(--panel-line);
+  }
+  .viewer-title{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .viewer-title strong{
+    font-family:var(--font-display); font-weight:600; font-size:var(--fs-md);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .viewer-body{ position:relative; flex:1; background:#2a2f2c; }
+  .viewer-body iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; background:transparent; }
+  .viewer-loading{
+    position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:12px; color:var(--parchment-dim); font-size:var(--fs-xs); text-align:center; padding:24px; line-height:1.6;
+  }
+  .viewer-loading[hidden]{ display:none; }
+  .viewer-loading p{ margin:0; max-width:280px; }
+  .spinner{
+    width:28px; height:28px; border-radius:50%;
+    border:3px solid var(--panel-line); border-top-color:var(--brass);
+    animation:spin .8s linear infinite;
+  }
+
+  .toast{
+    position:fixed; left:50%; bottom:calc(var(--bar-h) + 16px);
+    transform:translate(-50%, 8px);
+    z-index:70; max-width:88vw; text-align:center;
+    background:var(--panel-hi); border:1px solid var(--panel-line); color:var(--parchment);
+    padding:11px 18px; border-radius:999px; font-size:var(--fs-xs); line-height:1.4;
+    opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s var(--ease);
+  }
+  .toast.show{ opacity:1; transform:translate(-50%, 0); }
+
+  /* 隱藏「新增」與卡片「編輯」圖示：透明但仍可點 */
+  #addBtn,
+  #addBtn:active,
+  .edit,
+  .edit:active{
+    color:transparent;
+  }
+  #addBtn:hover{ background:none; }
 </style>
 </head>
 <body>
@@ -290,11 +496,23 @@
 <header id="header">
   <div class="wrap">
     <div class="brand">
-      <div class="brand-mark">
+      <div class="brand-mark" id="brandMark" title="回到頂端">
         <h1>INDEX</h1>
         <span class="tab">目錄</span>
       </div>
+      <div class="search" id="searchWrap">
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="searchInput" type="search" inputmode="search" enterkeyhint="search"
+               placeholder="搜尋名稱、說明或標籤…" autocomplete="off" autocorrect="off" autocapitalize="off">
+        <span class="kbd">/</span>
+        <button class="clear" id="clearSearch" aria-label="清除搜尋">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
       <div class="brand-actions">
+        <button class="icon-btn" id="addBtn" aria-label="新增項目">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
         <span class="no" id="count" style="margin-right:4px"></span>
         <button class="icon-btn" id="fontBtn" aria-label="調整文字大小"><span class="aa">Aa</span></button>
         <button class="icon-btn" id="refreshBtn" aria-label="重新讀取目錄">
@@ -305,18 +523,8 @@
         </button>
       </div>
     </div>
-
-    <div class="search" id="searchWrap">
-      <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input id="searchInput" type="search" inputmode="search" enterkeyhint="search"
-             placeholder="搜尋名稱、說明或標籤…" autocomplete="off" autocorrect="off" autocapitalize="off">
-      <button class="clear" id="clearSearch" aria-label="清除搜尋">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
-      </button>
-    </div>
-
     <nav class="chips" id="chips" aria-label="標籤篩選"></nav>
-    <nav class="rail" id="rail" aria-label="字母索引"></nav>
+    <nav class="rail" id="rail" aria-label="字母索引" hidden></nav>
   </div>
 </header>
 
@@ -339,38 +547,132 @@
   <button data-view="recent"><span>最新</span><span class="dot"></span></button>
 </nav>
 
+<!-- 詳細資訊視窗 -->
+<div class="sheet" id="detailSheet" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+  <div class="sheet-bg" data-close="1"></div>
+  <div class="sheet-panel" tabindex="-1">
+    <div class="sheet-grip"></div>
+    <button class="sheet-x" data-close="1" aria-label="關閉">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <span class="no" id="detailNo"></span>
+    <h3 id="detailTitle"></h3>
+    <div id="detailTags"></div>
+    <p id="detailDesc"></p>
+    <a id="detailDomain" href="#" target="_blank" rel="noopener noreferrer"></a>
+    <div class="sheet-actions">
+      <!-- <button class="btn" id="detailEditBtn">編輯</button> -->
+      <button class="btn ghost-brass" id="detailReadmeBtn" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+        README 介紹
+      </button>
+      <a class="btn primary" id="detailOpenBtn" href="#" target="_blank" rel="noopener noreferrer">
+        打開網站
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- 編輯 / 新增面板 -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-bg" data-close="1"></div>
+  <div class="sheet-panel" tabindex="-1">
+    <div class="sheet-grip"></div>
+    <h3 id="sheetTitle">新增項目</h3>
+
+    <div class="field">
+      <label for="fApp">名稱</label>
+      <input id="fApp" type="text" autocomplete="off" placeholder="例如：發票整理表">
+    </div>
+    <div class="field">
+      <label for="fUrl">網址</label>
+      <input id="fUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="https://">
+    </div>
+    <div class="field">
+      <label for="fReadme">README 介紹（PDF 網址）</label>
+      <input id="fReadme" type="url" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="https://drive.google.com/file/d/…/view">
+      <div class="hint">選填。Google 雲端硬碟的 PDF 請設為「知道連結的任何人都能檢視」。</div>
+    </div>
+    <div class="field">
+      <label for="fDesc">說明</label>
+      <textarea id="fDesc" rows="6" placeholder="說明這個工具做什麼，可以寫長一點"></textarea>
+      <div class="hint"><span id="descCount">0</span> 字</div>
+    </div>
+    <div class="field">
+      <label for="fTags">標籤</label>
+      <input id="fTags" type="text" autocomplete="off" placeholder="工作, 設計">
+      <div class="hint">用逗號分隔，會變成卡片上的標籤與上方的篩選鈕。</div>
+    </div>
+
+    <div class="sheet-actions">
+      <button class="btn danger" id="deleteBtn" aria-label="刪除這一筆" hidden>刪除</button>
+      <button class="btn" id="cancelBtn">取消</button>
+      <button class="btn primary" id="saveBtn">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- README PDF 檢視視窗 -->
+<div class="sheet" id="viewer" role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
+  <div class="sheet-bg" data-close="1"></div>
+  <div class="sheet-panel" tabindex="-1">
+    <div class="viewer-head">
+      <div class="viewer-title">
+        <span class="no">README 介紹</span>
+        <strong id="viewerTitle"></strong>
+      </div>
+      <a class="icon-btn" id="viewerExt" href="#" target="_blank" rel="noopener noreferrer" aria-label="在新分頁開啟 PDF" title="在新分頁開啟">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4h6v6"/><path d="M20 4 11 13"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>
+      </a>
+      <button class="icon-btn" data-close="1" aria-label="關閉">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="viewer-body">
+      <div class="viewer-loading" id="viewerLoading">
+        <div class="spinner"></div>
+        <p id="viewerMsg">PDF 載入中…</p>
+      </div>
+      <iframe id="viewerFrame" title="README PDF"></iframe>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
 <script>
 /* =====================================================================
  * 設定：換成你部署 Apps Script 後拿到的網址（結尾是 /exec）
  * ===================================================================== */
-const API_URL ='https://script.google.com/macros/s/AKfycbyMylU3yYK01Hhn5Po96bjYEASetiZ4RXmEiGUj_Sjt4Peu38wJApZohGagXDFVx8xw-Q/exec';
+const API_URL ='https://script.google.com/macros/s/AKfycbyCjqxwnXp87Y_jgt6I8ChTEtrSZmXU5i1McajKvKYjItvhxeWLbUP2LUgc5dk0C7cR/exec';
 
 const FAV_KEY   = 'index_favorites_v1';
 const USAGE_KEY = 'index_usage_v1';
 const CACHE_KEY = 'index_cache_v1';
 const SCALE_KEY = 'index_scale_v1';
 
+const $ = id => document.getElementById(id);
 const els = {
-  header:document.getElementById('header'),
-  main:document.getElementById('main'),
-  skeleton:document.getElementById('skeleton'),
-  offline:document.getElementById('offlineNote'),
-  count:document.getElementById('count'),
-  search:document.getElementById('searchInput'),
-  searchWrap:document.getElementById('searchWrap'),
-  clearSearch:document.getElementById('clearSearch'),
-  chips:document.getElementById('chips'),
-  rail:document.getElementById('rail'),
-  tabbar:document.getElementById('tabbar'),
-  refreshBtn:document.getElementById('refreshBtn'),
-  installBtn:document.getElementById('installBtn'),
-  fontBtn:document.getElementById('fontBtn'),
+  header:$('header'), main:$('main'), skeleton:$('skeleton'), offline:$('offlineNote'),
+  count:$('count'), search:$('searchInput'), searchWrap:$('searchWrap'), clearSearch:$('clearSearch'),
+  chips:$('chips'), rail:$('rail'), tabbar:$('tabbar'), brandMark:$('brandMark'),
+  refreshBtn:$('refreshBtn'), installBtn:$('installBtn'), fontBtn:$('fontBtn'), addBtn:$('addBtn'),
+  sheet:$('sheet'), sheetTitle:$('sheetTitle'),
+  fApp:$('fApp'), fUrl:$('fUrl'), fDesc:$('fDesc'), descCount:$('descCount'), fTags:$('fTags'),
+  saveBtn:$('saveBtn'), cancelBtn:$('cancelBtn'), deleteBtn:$('deleteBtn'), toast:$('toast'),
+  detailSheet:$('detailSheet'), detailNo:$('detailNo'), detailTitle:$('detailTitle'),
+  detailTags:$('detailTags'), detailDesc:$('detailDesc'), detailDomain:$('detailDomain'),
+  detailOpenBtn:$('detailOpenBtn'), detailReadmeBtn:$('detailReadmeBtn'), fReadme:$('fReadme'),
+  viewer:$('viewer'), viewerTitle:$('viewerTitle'), viewerExt:$('viewerExt'),
+  viewerFrame:$('viewerFrame'), viewerLoading:$('viewerLoading'), viewerMsg:$('viewerMsg'),
 };
 
 let allApps = [];
 let activeTags = new Set();
 let view = 'alpha';          // alpha | fav | popular | recent
 let loaded = false;
+let currentQ = '';           // 目前搜尋字（給高亮用）
 
 /* ---------- 本機狀態 ---------- */
 const readJSON = (k, fallback)=>{ try{ return JSON.parse(localStorage.getItem(k)) ?? fallback; }catch(e){ return fallback; } };
@@ -378,13 +680,10 @@ const writeJSON = (k, v)=>{ try{ localStorage.setItem(k, JSON.stringify(v)); }ca
 
 let favorites = new Set(readJSON(FAV_KEY, []));
 let usage = readJSON(USAGE_KEY, {});
+const buzz = ()=>{ if(navigator.vibrate) navigator.vibrate(8); };
 
-/* ---------- 文字大小：標準 / 大 / 特大 ---------- */
-const SCALES = [
-  { v:1,    name:'標準' },
-  { v:1.15, name:'大' },
-  { v:1.3,  name:'特大' },
-];
+/* ---------- 文字大小 ---------- */
+const SCALES = [ { v:1, name:'標準' }, { v:1.15, name:'大' }, { v:1.3, name:'特大' } ];
 let scaleIdx = Math.min(Math.max(readJSON(SCALE_KEY, 0), 0), SCALES.length - 1);
 
 function applyScale(){
@@ -397,21 +696,65 @@ els.fontBtn.addEventListener('click', ()=>{
   scaleIdx = (scaleIdx + 1) % SCALES.length;
   writeJSON(SCALE_KEY, scaleIdx);
   applyScale();
-  if(navigator.vibrate) navigator.vibrate(8);
+  toast(`文字大小：${SCALES[scaleIdx].name}`, 1200);
+  buzz();
 });
 applyScale();
 
+/* ---------- 小工具 ---------- */
 const keyOf = a => (a.app + '::' + a.url).trim().toLowerCase();
 const escapeHtml = s => String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function domainOf(url){ try{ return new URL(url).hostname.replace(/^www\./,''); }catch(e){ return url; } }
+const isHiddenApp = a => /^[＠@]/.test((a.app || '').trim());
+
+/* README PDF 網址：只要欄位名稱含 readme 或 pdf（不分大小寫）都接受 */
+function readmeOf(a){
+  if(!a) return '';
+  for(const k of Object.keys(a)){
+    if(/readme|pdf/i.test(k) && a[k]) return String(a[k]).trim();
+  }
+  return '';
+}
+
+/* 把各種 PDF 連結轉成能嵌在視窗裡顯示的網址 */
+function pdfEmbedUrl(u){
+  // Google 雲端硬碟：/file/d/ID/view、open?id=ID、uc?id=ID → /preview
+  const m = u.match(/drive\.google\.com\/file\/d\/([^/?#]+)/)
+         || u.match(/drive\.google\.com\/(?:open|uc)\?(?:.*&)?id=([^&#]+)/);
+  if(m) return `https://drive.google.com/file/d/${m[1]}/preview`;
+  // 手機瀏覽器多半不能直接在框內顯示 PDF，改用 Google 檢視器
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+              || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+  if(mobile) return 'https://docs.google.com/viewer?embedded=true&url=' + encodeURIComponent(u);
+  return u;
+}
+
+/* 搜尋字高亮：先切段再逐段跳脫，避免破壞 HTML */
+function hl(text){
+  const s = String(text);
+  const q = currentQ;
+  if(!q) return escapeHtml(s);
+  const low = s.toLowerCase();
+  let i = 0, j, out = '';
+  while((j = low.indexOf(q, i)) !== -1){
+    out += escapeHtml(s.slice(i, j)) + '<mark>' + escapeHtml(s.slice(j, j + q.length)) + '</mark>';
+    i = j + q.length;
+  }
+  return out + escapeHtml(s.slice(i));
+}
 
 function toggleFavorite(id, btn){
   const on = !favorites.has(id);
   on ? favorites.add(id) : favorites.delete(id);
   writeJSON(FAV_KEY, [...favorites]);
-  if(navigator.vibrate) navigator.vibrate(8);
+  buzz();
   if(view === 'fav' || view === 'alpha'){ render(); }   // 收藏區需要重排
-  else if(btn){ btn.classList.toggle('active', on); btn.textContent = on ? '★' : '☆'; }
+  else if(btn){
+    btn.classList.toggle('active', on);
+    btn.textContent = on ? '★' : '☆';
+    btn.classList.remove('pop'); void btn.offsetWidth; btn.classList.add('pop');
+  }
+  toast(on ? '已加入收藏' : '已取消收藏', 1200);
 }
 function trackUsage(id){
   usage[id] = (usage[id] || 0) + 1;
@@ -419,52 +762,79 @@ function trackUsage(id){
 }
 
 /* ---------- 卡片 ---------- */
-function cardHtml(a){
+function cardHtml(a, i){
   const id = keyOf(a);
   const fav = favorites.has(id);
   const tags = (a.tags || []).slice(0,2);
+  const delay = i < 18 ? ` style="--i:${i}"` : ' style="--i:18"';
   return `
-    <div class="card">
-      <a class="stretched-link" href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer"
-         aria-label="開啟 ${escapeHtml(a.app)}" data-track="${escapeHtml(id)}"></a>
+    <div class="card"${delay}>
+      <button class="stretched-link" data-detail="${escapeHtml(id)}"
+              aria-label="查看 ${escapeHtml(a.app)} 的詳細資訊"></button>
       <span class="no">No. ${String(a.id).padStart(3,'0')}</span>
       <button class="star ${fav?'active':''}" data-fav="${escapeHtml(id)}"
               aria-pressed="${fav}" aria-label="收藏 ${escapeHtml(a.app)}">${fav?'★':'☆'}</button>
-      <h2>${escapeHtml(a.app)}</h2>
-      <p>${escapeHtml(a.describe || '（尚無說明）')}</p>
+      <h2>${hl(a.app)}</h2>
+      <p>${a.describe ? hl(a.describe) : '（尚無說明）'}</p>
       ${tags.length ? `<div class="tag-row">${tags.map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${readmeOf(a) ? `<div class="card-actions"><button class="readme-btn" data-readme="${escapeHtml(id)}" aria-label="查看 ${escapeHtml(a.app)} 的 README 介紹">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/></svg>README</button></div>` : ''}
       <div class="foot">
-        <span class="domain">${escapeHtml(domainOf(a.url))}</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.7"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>
+        <span class="domain"${a.row ? ' style="padding-right:34px"' : ''}>${hl(a.url || '')}</span>
+        ${a.row ? '' : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:.7"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>`}
       </div>
+      ${a.row ? `<button class="edit" data-edit="${a.row}" aria-label="編輯 ${escapeHtml(a.app)}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>` : ''}
     </div>`;
 }
 
-/* 事件委派：一次綁在 main 上，重繪時不必重新綁 */
+/* 事件委派 */
 els.main.addEventListener('click', (e)=>{
   const star = e.target.closest('[data-fav]');
   if(star){ e.preventDefault(); e.stopPropagation(); toggleFavorite(star.dataset.fav, star); return; }
-  const link = e.target.closest('[data-track]');
-  if(link) trackUsage(link.dataset.track);
+  const readme = e.target.closest('[data-readme]');
+  if(readme){
+    e.preventDefault(); e.stopPropagation();
+    openViewer(allApps.find(a=> keyOf(a) === readme.dataset.readme) || null);
+    return;
+  }
+  const pencil = e.target.closest('[data-edit]');
+  if(pencil){
+    e.preventDefault(); e.stopPropagation();
+    const row = Number(pencil.dataset.edit);
+    openEditor(allApps.find(a=> a.row === row) || null);
+    return;
+  }
+  const detail = e.target.closest('[data-detail]');
+  if(detail){
+    e.preventDefault();
+    openDetail(allApps.find(a=> keyOf(a) === detail.dataset.detail) || null);
+  }
 });
 
 /* ---------- 篩選與排序 ---------- */
+// @ 開頭的項目平常隱藏；搜尋字含 @ 時才顯示
+const visibleApps = ()=> allApps.filter(a => !isHiddenApp(a) || /[＠@]/.test(currentQ));
+
 function computeFiltered(){
-  const q = els.search.value.trim().toLowerCase();
-  let list = allApps.filter(a=>{
+  const q = currentQ;
+  let list = visibleApps().filter(a => {
     const okQ = !q
-      || a.app.toLowerCase().includes(q)
-      || (a.describe||'').toLowerCase().includes(q)
-      || (a.tags||[]).some(t=> t.toLowerCase().includes(q));
-    const okT = activeTags.size === 0 || (a.tags||[]).some(t=> activeTags.has(t));
+      || (a.app || '').toLowerCase().includes(q)
+      || (a.describe || '').toLowerCase().includes(q)
+      || (a.url || '').toLowerCase().includes(q)
+      || (a.tags || []).some(t => t.toLowerCase().includes(q));
+    const okT = activeTags.size === 0 || (a.tags || []).some(t => activeTags.has(t));
     return okQ && okT;
   });
-  if(view === 'fav') list = list.filter(a=> favorites.has(keyOf(a)));
-  if(view === 'popular') list = list.filter(a=> usage[keyOf(a)]);
 
-  if(view === 'recent')       list.sort((a,b)=> b.id - a.id);
-  else if(view === 'popular') list.sort((a,b)=> (usage[keyOf(b)]||0) - (usage[keyOf(a)]||0));
-  else                        list.sort((a,b)=> a.app.localeCompare(b.app, 'zh-Hant'));
+  if(view === 'fav')     list = list.filter(a => favorites.has(keyOf(a)));
+  if(view === 'popular') list = list.filter(a => usage[keyOf(a)]);
+
+  if(view === 'recent')       list.sort((a,b) => b.id - a.id);
+  else if(view === 'popular') list.sort((a,b) => (usage[keyOf(b)] || 0) - (usage[keyOf(a)] || 0));
+  else                        list.sort((a,b) => a.app.localeCompare(b.app, 'zh-Hant'));
   return list;
 }
 
@@ -475,11 +845,14 @@ function groupByLetter(apps){
     if(!/[A-Z]/.test(L)) L = '#';
     (g[L] ||= []).push(a);
   });
-  return Object.keys(g).sort().map(L=>({ letter:L, items:g[L] }));
+  // 英文字母在前、其他（中文、符號）收在最後
+  return Object.keys(g).sort((x,y)=> (x === '#') - (y === '#') || x.localeCompare(y))
+    .map(L=>({ letter:L, items:g[L] }));
 }
 
 function renderChips(){
-  const tags = [...new Set(allApps.flatMap(a=> a.tags || []))].sort((a,b)=> a.localeCompare(b,'zh-Hant'));
+  // 只列出看得到的項目的標籤（隱藏項目的標籤不再外洩到篩選列）
+  const tags = [...new Set(visibleApps().flatMap(a=> a.tags || []))].sort((a,b)=> a.localeCompare(b,'zh-Hant'));
   els.chips.innerHTML =
     tags.map(t=>`<button data-tag="${escapeHtml(t)}" class="${activeTags.has(t)?'active':''}">${escapeHtml(t)}</button>`).join('')
     + (activeTags.size ? `<button class="clear-tags" data-clear="1">清除 ×</button>` : '');
@@ -488,7 +861,9 @@ els.chips.addEventListener('click', (e)=>{
   const b = e.target.closest('button'); if(!b) return;
   if(b.dataset.clear){ activeTags.clear(); }
   else{ const t = b.dataset.tag; activeTags.has(t) ? activeTags.delete(t) : activeTags.add(t); }
-  render();
+  buzz();
+  window.scrollTo({ top:0 });
+  render({ animate:true });
 });
 
 function emptyState(){
@@ -499,102 +874,189 @@ function emptyState(){
   return `<div class="state"><h3>沒有符合的項目</h3><p>換個關鍵字，或清除標籤篩選。</p></div>`;
 }
 
-function render(){
+const section = (label, items, id, start)=>
+  `<h2 class="section-label"${id ? ` id="sec-${id}" data-letter="${id}"` : ''}>${label}<span class="n">${items.length}</span></h2>` +
+  `<div class="grid">${items.map((a,i)=> cardHtml(a, start + i)).join('')}</div>`;
+
+function render(opts){
   if(!loaded) return;
+  const animate = !!(opts && opts.animate);
   renderChips();
 
   if(allApps.length === 0){
     els.rail.hidden = true;
     els.count.textContent = '';
     els.main.innerHTML = `<div class="state"><h3>目錄是空的</h3><p>在試算表新增一列（App / Url / Describe），再回到這裡重新讀取。</p><button class="retry" id="retryBtn">重新讀取</button></div>`;
-    document.getElementById('retryBtn').onclick = ()=> load(true);
+    $('retryBtn').onclick = ()=> load(true);
     return;
   }
 
   const list = computeFiltered();
-  els.count.textContent = `${list.length}/${allApps.length}`;
+  els.count.textContent = `${list.length}/${visibleApps().length}`;
 
   if(list.length === 0){
     els.rail.hidden = true;
     els.main.innerHTML = emptyState();
+    els.main.prepend(els.offline);
     return;
   }
 
   let html = '';
   if(view === 'alpha'){
+    // 收藏釘在最上面，下面的字母分區就不再重複出現
     const pinned = list.filter(a=> favorites.has(keyOf(a)));
-    if(pinned.length) html += `<h2 class="section-label">★ 收藏</h2><div class="grid">${pinned.map(cardHtml).join('')}</div>`;
-    const groups = groupByLetter(list);
-    els.rail.hidden = false;
+    const rest = list.filter(a=> !favorites.has(keyOf(a)));
+    if(pinned.length) html += section('★ 收藏', pinned, null, 0);
+    const groups = groupByLetter(rest);
+    let n = pinned.length;
+    html += groups.map(g=>{
+      const s = section(g.letter === '#' ? '中文・其他' : g.letter, g.items, g.letter, n);
+      n += g.items.length;
+      return s;
+    }).join('');
+    // 只有一組時字母列沒有意義，直接藏起來
+    els.rail.hidden = groups.length <= 1;
     els.rail.innerHTML = groups.map(g=>`<button data-letter="${g.letter}">${g.letter}</button>`).join('');
-    html += groups.map(g=>`<h2 class="section-label" id="sec-${g.letter}">${g.letter}</h2><div class="grid">${g.items.map(cardHtml).join('')}</div>`).join('');
   }else{
     els.rail.hidden = true;
     const label = { fav:'★ 收藏', popular:'常用優先', recent:'最新加入' }[view];
-    html += `<h2 class="section-label">${label}</h2><div class="grid">${list.map(cardHtml).join('')}</div>`;
+    html += section(label, list, null, 0);
   }
+
   els.main.innerHTML = html;
+  els.main.classList.toggle('enter', animate);
   els.main.prepend(els.offline);
+  updateActiveLetter();
 }
 
+/* A–Z 跳頁：瞬間定位，並暫時讓頂部列保持顯示 */
 els.rail.addEventListener('click', (e)=>{
   const b = e.target.closest('button'); if(!b) return;
-  document.getElementById('sec-' + b.dataset.letter)?.scrollIntoView({ block:'start' });
+  const target = $('sec-' + b.dataset.letter);
+  if(!target) return;
+  suppressHideUntil = Date.now() + 400;
+  showHeader();
+  target.scrollIntoView({ block:'start', behavior:'instant' });
+  buzz();
 });
 
-/* ---------- 分頁列 ---------- */
+/* ---------- 分頁列：再點一次目前分頁 → 回到頂端 ---------- */
 els.tabbar.addEventListener('click', (e)=>{
   const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.view === view){ window.scrollTo({ top:0, behavior:'smooth' }); return; }
   view = b.dataset.view;
   [...els.tabbar.children].forEach(x=> x.classList.toggle('active', x === b));
   window.scrollTo({ top:0 });
-  render();
+  showHeader();
+  buzz();
+  render({ animate:true });
 });
+els.brandMark.addEventListener('click', ()=> window.scrollTo({ top:0, behavior:'smooth' }));
 
 /* ---------- 搜尋 ---------- */
 let searchTimer;
 els.search.addEventListener('input', ()=>{
   els.searchWrap.classList.toggle('filled', els.search.value !== '');
   clearTimeout(searchTimer);
-  searchTimer = setTimeout(render, 120);
+  searchTimer = setTimeout(()=>{
+    currentQ = els.search.value.trim().toLowerCase();
+    if(window.scrollY > 0) window.scrollTo({ top:0 });
+    render();
+  }, 120);
 });
-els.search.addEventListener('keydown', e=>{ if(e.key === 'Enter') els.search.blur(); });
+els.search.addEventListener('keydown', e=>{
+  if(e.key === 'Enter') els.search.blur();
+  if(e.key === 'Escape' && els.search.value){ e.stopPropagation(); els.clearSearch.click(); }
+});
 els.clearSearch.addEventListener('click', ()=>{
   els.search.value = '';
+  currentQ = '';
   els.searchWrap.classList.remove('filled');
   render();
   els.search.focus();
 });
+/* 桌機：按 / 直接跳到搜尋框 */
+document.addEventListener('keydown', e=>{
+  if(e.key !== '/' || currentSheet || viewerOpen) return;
+  const t = e.target;
+  if(t.matches && t.matches('input, textarea, [contenteditable]')) return;
+  e.preventDefault();
+  showHeader();
+  els.search.focus();
+});
 
-/* ---------- 捲動時收合品牌列，換更多內容空間 ---------- */
-let lastY = 0, ticking = false;
+/* ---------- 捲動：自動收起頂部列、標示目前字母 ---------- */
+let lastY = 0, ticking = false, suppressHideUntil = 0;
+const DELTA = 8;   // 單次捲動超過這個量才反應，避免抖動
+
+function headerH(){ return els.header.offsetHeight; }
+function showHeader(){ els.header.classList.remove('hide'); }
+
+function onScroll(){
+  const y = Math.max(0, window.scrollY);
+  const h = headerH();
+  els.header.classList.toggle('scrolled', y > 4);
+
+  const keepShown = Date.now() < suppressHideUntil
+                 || currentSheet
+                 || document.activeElement === els.search
+                 || y < h;
+  if(keepShown){ showHeader(); lastY = y; }
+  else if(y - lastY > DELTA){ els.header.classList.add('hide'); lastY = y; }
+  else if(lastY - y > DELTA){ showHeader(); lastY = y; }
+
+  updateActiveLetter();
+  ticking = false;
+}
 window.addEventListener('scroll', ()=>{
   if(ticking) return;
   ticking = true;
-  requestAnimationFrame(()=>{
-    const y = window.scrollY;
-    els.header.classList.toggle('compact', y > 60 && y > lastY);
-    lastY = y;
-    ticking = false;
-  });
+  requestAnimationFrame(onScroll);
 }, { passive:true });
 
-/* 讓 A–Z 跳頁不被吸頂列擋住 */
+let activeLetter = null;
+function updateActiveLetter(){
+  if(els.rail.hidden) return;
+  const line = (els.header.classList.contains('hide') ? 0 : headerH()) + 24;
+  let cur = null;
+  for(const lab of els.main.querySelectorAll('.section-label[data-letter]')){
+    if(lab.getBoundingClientRect().top <= line) cur = lab.dataset.letter; else break;
+  }
+  if(!cur){ const first = els.main.querySelector('.section-label[data-letter]'); cur = first && first.dataset.letter; }
+  if(cur === activeLetter && els.rail.querySelector('.on')) return;
+  activeLetter = cur;
+  let onBtn = null;
+  for(const b of els.rail.children){
+    const on = b.dataset.letter === cur;
+    b.classList.toggle('on', on);
+    if(on) onBtn = b;
+  }
+  // 讓亮起的字母自動滑到字母列中間（只動水平方向，不會拉動整頁）
+  if(onBtn){
+    const target = onBtn.offsetLeft - (els.rail.clientWidth - onBtn.offsetWidth) / 2;
+    els.rail.scrollTo({ left:Math.max(0, target), behavior:'smooth' });
+  }
+}
+
+/* 頂部列高度同步給內容區與跳頁定位 */
 const syncHeaderHeight = ()=>
   document.documentElement.style.setProperty('--header-h', els.header.offsetHeight + 'px');
 new ResizeObserver(syncHeaderHeight).observe(els.header);
+syncHeaderHeight();
 
 /* ---------- 讀取資料（JSONP，避開 Apps Script 沒有 CORS 標頭的問題） ---------- */
-function loadViaJsonp(){
+function api(params, timeout){
   return new Promise((resolve, reject)=>{
-    const cb = 'indexCb_' + Date.now();
+    const cb = 'indexCb_' + Math.random().toString(36).slice(2);
     const s = document.createElement('script');
     let done = false;
-    const cleanup = ()=>{ delete window[cb]; s.remove(); };
+    const cleanup = ()=>{ try{ delete window[cb]; }catch(e){ window[cb] = undefined; } s.remove(); };
     window[cb] = d=>{ done = true; cleanup(); resolve(d); };
-    s.src = `${API_URL}?action=list&callback=${cb}&_=${Date.now()}`;
+    const qs = Object.entries({ ...params, callback:cb, _:Date.now() })
+      .map(([k,v])=> `${encodeURIComponent(k)}=${encodeURIComponent(v ?? '')}`).join('&');
+    s.src = `${API_URL}?${qs}`;
     s.onerror = ()=>{ if(!done){ cleanup(); reject(new Error('jsonp failed')); } };
-    setTimeout(()=>{ if(!done){ cleanup(); reject(new Error('timeout')); } }, 12000);
+    setTimeout(()=>{ if(!done){ cleanup(); reject(new Error('timeout')); } }, timeout || 12000);
     document.body.appendChild(s);
   });
 }
@@ -602,11 +1064,11 @@ function loadViaJsonp(){
 async function load(manual){
   const cached = readJSON(CACHE_KEY, null);
 
-  // 有快取就先畫出來，開啟 App 幾乎是瞬間有畫面
+  // 有快取就先畫出來，開啟幾乎瞬間有畫面
   if(cached && cached.apps && !loaded){
     allApps = cached.apps;
     loaded = true;
-    render();
+    render({ animate:true });
   }else if(!loaded){
     els.main.innerHTML = '';
     els.main.append(els.offline, els.skeleton);
@@ -614,16 +1076,13 @@ async function load(manual){
 
   els.refreshBtn.classList.add('spin');
   try{
-    const data = await loadViaJsonp();
+    const data = await api({ action:'list' });
     if(!data.ok) throw new Error('bad payload');
-    allApps = data.apps;
-    loaded = true;
-    writeJSON(CACHE_KEY, { apps:data.apps, at:Date.now() });
-    els.offline.classList.remove('show');
-    render();
+    const changed = adoptList(data.apps);
+    if(manual) toast(changed ? '目錄已更新' : '已是最新', 1400);
   }catch(err){
     if(loaded){
-      els.offline.classList.add('show');   // 有舊資料就繼續用，只提示一行
+      els.offline.classList.add('show');
     }else{
       els.main.innerHTML = `
         <div class="state">
@@ -631,17 +1090,273 @@ async function load(manual){
           <p>檢查網路連線，或確認 <code>API_URL</code> 指向你的 Apps Script 部署網址，且存取權限設為「任何人」。</p>
           <button class="retry" id="retryBtn">重新讀取</button>
         </div>`;
-      document.getElementById('retryBtn').onclick = ()=> load(true);
+      $('retryBtn').onclick = ()=> load(true);
     }
   }finally{
     els.refreshBtn.classList.remove('spin');
   }
 }
 
+/* 資料沒變就不重畫，避免背景更新時畫面閃一下、捲動位置跳動 */
+function adoptList(apps){
+  const firstLoad = !loaded;
+  const same = !firstLoad && JSON.stringify(apps) === JSON.stringify(allApps);
+  allApps = apps;
+  loaded = true;
+  writeJSON(CACHE_KEY, { apps, at:Date.now() });
+  els.offline.classList.remove('show');
+  if(!same) render({ animate:firstLoad });
+  return !same;
+}
+
 els.refreshBtn.addEventListener('click', ()=> load(true));
 window.addEventListener('online', ()=>{ if(els.offline.classList.contains('show')) load(); });
 
 load();
+
+/* ---------- 提示條 ---------- */
+let toastTimer;
+function toast(msg, ms){
+  els.toast.textContent = msg;
+  els.toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> els.toast.classList.remove('show'), ms || 2400);
+}
+
+/* ---------- 視窗管理：手機返回鍵可關閉、可往下滑關閉 ---------- */
+let currentSheet = null;
+
+function openSheet(el){
+  const replacing = !!currentSheet;
+  if(currentSheet) hideSheet(true);
+  currentSheet = el;
+  el.classList.remove('closing');
+  el.classList.add('open');
+  el.querySelector('.sheet-panel').style.setProperty('--drag', '0px');
+  document.documentElement.classList.add('locked');
+  if(replacing) history.replaceState({ indexSheet:1 }, '');
+  else history.pushState({ indexSheet:1 }, '');
+}
+function requestClose(){
+  if(!currentSheet) return;
+  if(history.state && history.state.indexSheet) history.back();   // 交給 popstate 收尾
+  else hideSheet();
+}
+function hideSheet(instant){
+  const el = currentSheet;
+  if(!el) return;
+  currentSheet = null;
+  editing = null;
+  detailApp = null;
+  if(!viewerOpen) document.documentElement.classList.remove('locked');
+  if(instant){ el.classList.remove('open', 'closing'); return; }
+  el.classList.add('closing');
+  setTimeout(()=>{ el.classList.remove('open', 'closing'); }, 180);
+}
+/* 返回鍵：先關最上層的 PDF 視窗，再關詳細視窗 */
+window.addEventListener('popstate', ()=>{
+  if(viewerOpen) hideViewer();
+  else if(currentSheet) hideSheet();
+});
+
+/* ---------- README PDF 檢視視窗（疊在詳細視窗上面） ---------- */
+let viewerOpen = false, viewerTimer;
+
+function openViewer(app){
+  if(!app) return;
+  const pdf = readmeOf(app);
+  if(!pdf){ toast('這個項目還沒有 README 介紹。'); return; }
+  if(!/^https?:\/\//i.test(pdf)){ toast('README 的網址格式不正確。'); return; }
+
+  els.viewerTitle.textContent = app.app;
+  els.viewerExt.href = pdf;
+  els.viewerLoading.hidden = false;
+  els.viewerMsg.textContent = 'PDF 載入中…';
+  els.viewerFrame.src = pdfEmbedUrl(pdf);
+
+  clearTimeout(viewerTimer);
+  viewerTimer = setTimeout(()=>{
+    els.viewerMsg.textContent = '還在載入。如果一直空白，請按右上角的按鈕在新分頁開啟。';
+  }, 8000);
+
+  const panel = els.viewer.querySelector('.sheet-panel');
+  panel.style.setProperty('--drag', '0px');
+  els.viewer.classList.remove('closing');
+  els.viewer.classList.add('open');
+  document.documentElement.classList.add('locked');
+  if(!viewerOpen) history.pushState({ indexViewer:1 }, '');
+  viewerOpen = true;
+  panel.focus({ preventScroll:true });
+}
+els.viewerFrame.addEventListener('load', ()=>{
+  if(!viewerOpen) return;
+  clearTimeout(viewerTimer);
+  els.viewerLoading.hidden = true;
+});
+function requestCloseViewer(){
+  if(!viewerOpen) return;
+  if(history.state && history.state.indexViewer) history.back();
+  else hideViewer();
+}
+function hideViewer(){
+  if(!viewerOpen) return;
+  viewerOpen = false;
+  clearTimeout(viewerTimer);
+  if(!currentSheet) document.documentElement.classList.remove('locked');
+  els.viewer.classList.add('closing');
+  setTimeout(()=>{
+    els.viewer.classList.remove('open', 'closing');
+    els.viewerFrame.removeAttribute('src');   // 關掉後停止載入、釋放記憶體
+  }, 180);
+}
+
+[[els.detailSheet, ()=> requestClose()], [els.sheet, ()=> requestClose()], [els.viewer, ()=> requestCloseViewer()]]
+.forEach(([sheet, close])=>{
+  sheet.addEventListener('click', e=>{ if(e.target.closest('[data-close]')) close(); });
+
+  // 往下滑關閉（只在內容已捲到頂時啟動）
+  const panel = sheet.querySelector('.sheet-panel');
+  let startY = null, dy = 0;
+  panel.addEventListener('touchstart', e=>{
+    if(panel.scrollTop > 0 || e.target.closest('input, textarea')) { startY = null; return; }
+    startY = e.touches[0].clientY; dy = 0;
+    panel.classList.remove('snap');
+  }, { passive:true });
+  panel.addEventListener('touchmove', e=>{
+    if(startY === null) return;
+    dy = Math.max(0, e.touches[0].clientY - startY);
+    if(dy > 0){ panel.classList.add('dragging'); panel.style.setProperty('--drag', dy + 'px'); }
+  }, { passive:true });
+  panel.addEventListener('touchend', ()=>{
+    if(startY === null) return;
+    panel.classList.remove('dragging');
+    if(dy > 90){ close(); }
+    else{ panel.classList.add('snap'); panel.style.setProperty('--drag', '0px'); }
+    startY = null;
+  });
+});
+
+/* ---------- 詳細資訊視窗 ---------- */
+let detailApp = null;
+
+function openDetail(app){
+  if(!app) return;
+  els.detailNo.textContent = 'No. ' + String(app.id).padStart(3,'0');
+  els.detailTitle.textContent = app.app;
+  els.detailTags.innerHTML = (app.tags || []).map(t=>`<span class="tag-pill">${escapeHtml(t)}</span>`).join('');
+  els.detailDesc.textContent = app.describe || '（尚無說明）';
+  els.detailDomain.textContent = app.url;          // 完整網址
+  els.detailDomain.href = app.url;
+  els.detailOpenBtn.href = app.url;
+  els.detailReadmeBtn.hidden = !readmeOf(app);
+  openSheet(els.detailSheet);
+  detailApp = app;
+  els.detailSheet.querySelector('.sheet-panel').focus({ preventScroll:true });
+}
+
+const openSite = ()=>{
+  if(detailApp) trackUsage(keyOf(detailApp));   // 打開網站才算一次使用
+  setTimeout(requestClose, 50);                  // 回到 INDEX 時視窗已收起
+};
+els.detailOpenBtn.addEventListener('click', openSite);
+els.detailDomain.addEventListener('click', openSite);
+els.detailReadmeBtn.addEventListener('click', ()=> openViewer(detailApp));
+
+/* ---------- 編輯：新增 / 修改 / 刪除 ---------- */
+let editing = null;
+let busy = false;
+
+function openEditor(app){
+  els.sheetTitle.textContent = app ? '編輯項目' : '新增項目';
+  els.fApp.value  = app ? app.app : '';
+  els.fUrl.value  = app ? app.url : '';
+  els.fReadme.value = app ? readmeOf(app) : '';
+  els.fDesc.value = app ? (app.describe || '') : '';
+  els.descCount.textContent = els.fDesc.value.length;
+  els.fTags.value = app ? (app.tags || []).join(', ') : '';
+  els.deleteBtn.hidden = !app;
+  openSheet(els.sheet);
+  editing = app || null;
+  setTimeout(()=> els.fApp.focus(), 60);
+}
+
+els.fDesc.addEventListener('input', ()=>{ els.descCount.textContent = els.fDesc.value.length; });
+
+const ERRORS = {
+  EMPTY:'名稱和網址都要填。',
+  BAD_URL:'網址要以 http:// 或 https:// 開頭。',
+  STALE:'這一筆在試算表被改動過了，請先重新讀取再編輯。',
+  NO_HEADER:'試算表找不到 App / Url / Describe 標題列。',
+  NO_ROW:'找不到這一列，可能已經被刪掉了。',
+  BAD_README:'README 網址要以 http:// 或 https:// 開頭。',
+  BUSY:'另一台裝置正在存檔，請稍等幾秒再試。',
+};
+
+async function submitEditor(){
+  if(busy) return;
+  const app = els.fApp.value.trim();
+  const url = els.fUrl.value.trim();
+  if(!app || !url){ toast(ERRORS.EMPTY); return; }
+  if(!/^https?:\/\//i.test(url)){ toast(ERRORS.BAD_URL); return; }
+  const readme = els.fReadme.value.trim();
+  if(readme && !/^https?:\/\//i.test(readme)){ toast('README 網址要以 http:// 或 https:// 開頭。'); return; }
+
+  const params = {
+    action: editing ? 'update' : 'create',
+    app, url, readme,
+    describe: els.fDesc.value.trim(),
+    tags: els.fTags.value.trim(),
+  };
+  if(editing){ params.row = editing.row; params.expect = editing.app; }
+
+  busy = true;
+  els.saveBtn.disabled = true;
+  els.saveBtn.textContent = '儲存中…';
+  try{
+    const res = await api(params, 20000);
+    if(!res || !res.ok){ toast(ERRORS[res && res.error] || '存不進去，請稍後再試。'); return; }
+    adoptList(res.apps);
+    requestClose();
+    toast(params.action === 'create' ? '已新增。' : '已更新。');
+  }catch(err){
+    toast('連不上目錄服務，檢查網路後再試一次。');
+  }finally{
+    busy = false;
+    els.saveBtn.disabled = false;
+    els.saveBtn.textContent = '儲存';
+  }
+}
+
+async function deleteEntry(){
+  if(busy || !editing) return;
+  if(!window.confirm(`刪除「${editing.app}」？試算表裡的這一列會一起移除。`)) return;
+
+  busy = true;
+  els.deleteBtn.disabled = true;
+  try{
+    const res = await api({ action:'delete', row:editing.row, expect:editing.app }, 20000);
+    if(!res || !res.ok){ toast(ERRORS[res && res.error] || '刪不掉，請稍後再試。'); return; }
+    adoptList(res.apps);
+    requestClose();
+    toast('已刪除。');
+  }catch(err){
+    toast('連不上目錄服務，檢查網路後再試一次。');
+  }finally{
+    busy = false;
+    els.deleteBtn.disabled = false;
+  }
+}
+
+els.addBtn.addEventListener('click', ()=> openEditor(null));
+els.saveBtn.addEventListener('click', submitEditor);
+els.cancelBtn.addEventListener('click', requestClose);
+els.deleteBtn.addEventListener('click', deleteEntry);
+
+document.addEventListener('keydown', e=>{
+  if(e.key !== 'Escape') return;
+  if(viewerOpen) requestCloseViewer();
+  else if(currentSheet) requestClose();
+});
 
 /* ---------- 安裝到主畫面 ---------- */
 let deferredPrompt;
